@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (Long-Run Support)</title>
+    <title>耐久カウンター Jewel Ocean (Quota Manager)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -16,7 +16,7 @@
             --text-main: #2d3436; --text-sub: #636e72;
             --btn-blue: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             --btn-red: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
-            --btn-red-solid: #ff6b6b; --accent-color: #6c5ce7;
+            --accent-color: #6c5ce7;
             --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
         }
         body {
@@ -29,8 +29,6 @@
         .bubble:nth-child(1) { width: 40px; height: 40px; left: 10%; animation-duration: 8s; }
         .bubble:nth-child(2) { width: 20px; height: 20px; left: 20%; animation-duration: 5s; animation-delay: 1s; }
         .bubble:nth-child(3) { width: 50px; height: 50px; left: 35%; animation-duration: 10s; animation-delay: 2s; }
-        .bubble:nth-child(4) { width: 80px; height: 80px; left: 50%; animation-duration: 11s; animation-delay: 0s; }
-        .bubble:nth-child(5) { width: 35px; height: 35px; left: 55%; animation-duration: 6s; animation-delay: 1s; }
         @keyframes rise { 0% { bottom: -100px; transform: translateX(0); } 50% { transform: translateX(100px); } 100% { bottom: 1080px; transform: translateX(-200px); } }
 
         .container { max-width: 950px; margin: 0 auto; position: relative; z-index: 1; }
@@ -114,6 +112,16 @@
         .btn-test { background: #b2bec3; padding: 6px 12px; font-size: 0.85rem; border-radius: 20px; color: white; border: none; cursor: pointer; }
         .btn-test:hover { background: #636e72; }
         input[type=range] { width: 300px; cursor: pointer; }
+
+        /* APIメーター */
+        .api-meter {
+            background: #fff; padding: 8px 16px; border-radius: 50px; 
+            border: 2px solid #dfe6e9; font-weight: bold; font-size: 0.9rem;
+            display: inline-flex; align-items: center; gap: 8px;
+            color: var(--text-sub);
+        }
+        .api-bar-bg { width: 100px; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
+        .api-bar-fill { height: 100%; background: #00b894; width: 0%; transition: width 0.3s; }
     </style>
 </head>
 <body>
@@ -130,16 +138,21 @@
     </div>
 
     <div class="glass-card setting-wrap">
-        <h2>
-            ⚙️ 配信設定 
-            <span style="font-size:0.9rem; margin-left:auto; color:var(--text-sub); font-weight:normal;">リセット(PT 0時): <span id="apiResetTimeDisplay">--:--</span></span>
-        </h2>
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 20px;">
+            <h2 style="margin:0; border:none;">⚙️ 配信設定</h2>
+            
+            <div class="api-meter">
+                <span>API消費(PT):</span>
+                <div class="api-bar-bg"><div id="apiBar" class="api-bar-fill"></div></div>
+                <span id="apiQuotaDisplay">0 / 10000</span>
+            </div>
+        </div>
         
         <div style="display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap;">
             <div class="input-group" style="flex:1; background:#fff3e0; padding:12px; border-radius:16px; border:1px solid #ffeaa7; margin-bottom:0; min-width:200px;">
                 <label style="margin-bottom:0; cursor:pointer; font-size:0.95rem;">
                     <input type="checkbox" id="demoModeCheck" style="width:18px; height:18px; vertical-align:middle;">
-                    <span style="vertical-align:middle; color:#d35400;">🧪 <b>デモモード</b> (APIキー不要)</span>
+                    <span style="vertical-align:middle; color:#d35400;">🧪 <b>デモモード</b> (API消費なし)</span>
                 </label>
             </div>
             <div class="input-group" style="flex:1; background:#e3f2fd; padding:12px; border-radius:16px; border:1px solid #bbdefb; margin-bottom:0; min-width:200px;">
@@ -154,10 +167,10 @@
             <div>
                 <div class="input-group">
                     <label>⏱️ 目標時間 (時間)</label>
-                    <input type="number" id="targetHours" value="24" min="1" oninput="calculateSafeIntervals()">
+                    <input type="number" id="targetHours" value="24" min="1" oninput="calculateSafeIntervals()" onkeyup="calculateSafeIntervals()" onchange="calculateSafeIntervals()">
                 </div>
                 <div class="input-group">
-                    <label>🤖 更新頻度 (超長時間対応)</label>
+                    <label>🛡️ 更新間隔の安全下限 (これ以上待機)</label>
                     <input type="text" id="chatIntervalDisplay" value="--" disabled style="background:#f1f2f6; color:#b2bec3;">
                     <input type="hidden" id="minIntervalSeconds" value="10">
                 </div>
@@ -172,6 +185,12 @@
                     <input type="password" id="apiKey" placeholder="AIzaSy...">
                 </div>
             </div>
+        </div>
+        
+        <div class="input-group" style="margin-top:10px;">
+             <label>📅 API使用上限 (デフォルト10,000)</label>
+             <input type="number" id="maxApiQuota" value="9800" style="width:120px;"> 
+             <span style="font-size:0.85rem; color:#636e72;">※この数値を超えると自動停止します (PTリセット: <span id="apiResetTimeDisplay">--:--</span>)</span>
         </div>
 
         <button class="btn-check" onclick="previewVideo()">🔍 動画をチェックする</button>
@@ -247,7 +266,7 @@
         </div>
         <div class="control-area">
             <button class="btn-start" onclick="startTracking()">🚀 計測スタート！</button>
-            <button class="btn-stop" onclick="stopTrackingManual()">⛔ 計測ストップ (終了)</button>
+            <button class="btn-stop" onclick="stopTrackingManual()">⛔ 計測ストップ (集計して終了)</button>
         </div>
     </div>
 
@@ -268,7 +287,8 @@
 <div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;">閉じる</button></div></div>
 
 <script>
-    const SAFE_QUOTA_LIMIT = 7500, HISTORY_KEY = "yt_endurance_v21", NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
+    const SAFE_QUOTA_LIMIT = 7500, HISTORY_KEY = "yt_endurance_v21", QUOTA_KEY = "yt_api_quota_pt_v1";
+    const NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
     
     let isTracking = false;
     let uiTimerId = null; 
@@ -287,28 +307,30 @@
     let audioCtx = null;
     let globalVolume = 0.5;
 
-    window.onload = function() { renderHistory(); checkDstAndDisplayResetTime(); calculateSafeIntervals(); updateSessionInfo(); };
+    window.onload = function() { 
+        renderHistory(); 
+        checkDstAndDisplayResetTime(); 
+        calculateSafeIntervals(); 
+        updateSessionInfo();
+        displayApiQuota(); // 初期表示で回数確認
+    };
 
     // --- 音量・音声関連 ---
     function initAudio() {
         if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if(audioCtx.state === 'suspended') audioCtx.resume();
     }
-
     const volSlider = document.getElementById('volumeSlider');
     const volDisplay = document.getElementById('volValue');
-
     volSlider.addEventListener('input', (e) => {
         globalVolume = parseFloat(e.target.value);
         volDisplay.innerText = Math.round(globalVolume * 100) + "%";
     });
-
     function playVolumeTest() {
         initAudio();
         speakText("この音量でいいですか？");
         setTimeout(playBeepSound, 2000);
     }
-
     function speakText(text) {
         if (!document.getElementById('soundEnabled').checked) return;
         const msg = new SpeechSynthesisUtterance(text);
@@ -317,28 +339,16 @@
         msg.rate = 1.1; 
         window.speechSynthesis.speak(msg);
     }
-
     function playBeepSound() {
         if (!document.getElementById('soundEnabled').checked) return;
         initAudio();
         const now = audioCtx.currentTime;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(880, now); 
-        osc.frequency.setValueAtTime(0, now + 0.1);
-        osc.frequency.setValueAtTime(880, now + 0.15); 
-        
+        osc.type = "sine"; osc.frequency.setValueAtTime(880, now); osc.frequency.setValueAtTime(0, now + 0.1); osc.frequency.setValueAtTime(880, now + 0.15); 
         const beepVol = globalVolume * 0.1; 
-        
-        gain.gain.setValueAtTime(beepVol, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.3);
-        
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start(now);
-        osc.stop(now + 0.3);
+        gain.gain.setValueAtTime(beepVol, now); gain.gain.linearRampToValueAtTime(0, now + 0.3);
+        osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now + 0.3);
     }
 
     // --- UI/初期化 ---
@@ -379,67 +389,87 @@
         return resetHour;
     }
     
-    // --- 【超長時間対応】APIリセットを考慮したスマート計算ロジック ---
+    // --- 太平洋時間(PT)基準のAPIクォータ管理 ---
+    function getPTDateString() {
+        const d = new Date();
+        return d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+    }
+
+    function addApiQuota(cost) {
+        if(isDemo || document.getElementById('demoModeCheck').checked) return; // デモならカウントしない
+
+        const todayPT = getPTDateString();
+        let record = JSON.parse(localStorage.getItem(QUOTA_KEY) || "{}");
+        if (record.date !== todayPT) { record = { date: todayPT, count: 0 }; }
+        
+        record.count = (record.count || 0) + cost;
+        localStorage.setItem(QUOTA_KEY, JSON.stringify(record));
+        displayApiQuota();
+    }
+
+    function checkQuotaSafe() {
+        if(document.getElementById('demoModeCheck').checked) return true;
+        const max = parseInt(document.getElementById('maxApiQuota').value) || 9800;
+        const todayPT = getPTDateString();
+        let record = JSON.parse(localStorage.getItem(QUOTA_KEY) || "{}");
+        
+        // 日付変わってたらOK
+        if (record.date !== todayPT) return true; 
+        
+        // 限界超えてたらNG
+        if (record.count >= max) return false;
+        return true;
+    }
+
+    function displayApiQuota() {
+        const todayPT = getPTDateString();
+        let record = JSON.parse(localStorage.getItem(QUOTA_KEY) || "{}");
+        if (record.date !== todayPT) { record = { date: todayPT, count: 0 }; }
+        
+        const current = record.count;
+        const max = parseInt(document.getElementById('maxApiQuota').value) || 10000;
+        
+        document.getElementById('apiQuotaDisplay').innerText = `${current} / 10000`;
+        
+        // バーの表示更新
+        const pct = Math.min(100, (current / 10000) * 100);
+        const bar = document.getElementById('apiBar');
+        bar.style.width = `${pct}%`;
+        
+        if(current > 9000) bar.style.background = "#d63031"; // 赤
+        else if(current > 7000) bar.style.background = "#fdcb6e"; // 黄
+        else bar.style.background = "#00b894"; // 緑
+    }
+
+    // --- APIリセットを考慮したスマート計算ロジック ---
     function calculateSafeIntervals() {
         let h = parseFloat(document.getElementById('targetHours').value);
         if(!h || h <= 0) h = 24;
-
         const now = new Date();
         const resetHour = checkDstAndDisplayResetTime();
-        
         let resetTime = new Date(now);
         resetTime.setHours(resetHour, 0, 0, 0);
-
-        if (now >= resetTime) {
-            resetTime.setDate(resetTime.getDate() + 1);
-        }
-
+        if (now >= resetTime) resetTime.setDate(resetTime.getDate() + 1);
         const endTarget = new Date(now.getTime() + (h + 4) * 60 * 60 * 1000);
 
-        // 期間A: 今 〜 次のリセットまで
-        const secondsToReset = (resetTime - now) / 1000;
-        
-        // 期間B: 次のリセット 〜 終了予定(+4h)まで
-        // 【重要修正点】
-        // 240時間設定などの場合、ここが膨大な時間になる。
-        // しかしAPI枠は毎日復活するので、「28時間（24h+4hバッファ）」で計算を頭打ちにしてよい。
-        // これにより、何百時間設定でも「28時間分のペース配分」で動き続けることができる。
-        const rawSecondsAfterReset = (endTarget - resetTime) / 1000;
-        const cappedSecondsAfterReset = Math.min(rawSecondsAfterReset, 28 * 3600); 
-
-        const durationA = Math.max(0, secondsToReset);
-        const durationB = Math.max(0, cappedSecondsAfterReset);
-        
-        // 長いほうを採用
-        const targetSeconds = Math.max(durationA, durationB);
-        
-        const estimatedStatsCost = (targetSeconds / 50) * 2;
-        let availableForComments = SAFE_QUOTA_LIMIT - estimatedStatsCost;
-        if(availableForComments < 1000) availableForComments = 1000; 
-
-        const maxCommentCalls = availableForComments / 5; 
-        let intervalSec = targetSeconds / maxCommentCalls;
-
+        let targetSeconds; let label = "";
         const intervalInput = document.getElementById('chatIntervalDisplay');
         const minIntervalInput = document.getElementById('minIntervalSeconds');
-        
-        let label = "";
-        if (durationA > durationB) {
-            label = `基準:リセット前(${Math.round(durationA/3600)}h)`;
-            intervalInput.style.color = "#d63031"; 
-        } else {
-            // 表示上は実際の残り時間を見せるが、計算は28hでキャップしている
-            let dispHours = Math.round(Math.max(0, rawSecondsAfterReset)/3600);
-            if(rawSecondsAfterReset > 28*3600) {
-                 label = `基準:リセット後(24h循環)`;
-            } else {
-                 label = `基準:リセット後(${dispHours}h)`;
-            }
-            intervalInput.style.color = "#0984e3"; 
-        }
+
+        // 残りQuotaを考慮
+        const todayPT = getPTDateString();
+        let record = JSON.parse(localStorage.getItem(QUOTA_KEY) || "{}");
+        let used = (record.date === todayPT) ? record.count : 0;
+        let remaining = SAFE_QUOTA_LIMIT - used;
+        if(remaining < 500) remaining = 500; // 最低限
+
+        // 目標時間ベースの計算
+        targetSeconds = (h + 4) * 3600;
+        const maxCommentCalls = remaining / 5; // コメントは5pt
+        let intervalSec = targetSeconds / maxCommentCalls;
 
         intervalInput.style.fontWeight = "bold";
-        intervalInput.value = `🐢 ${label} : 約${intervalSec.toFixed(1)} 秒`;
+        intervalInput.value = `🐢 推奨間隔: ${intervalSec.toFixed(1)} 秒 (残りQuota: ${SAFE_QUOTA_LIMIT - used})`;
         
         if(intervalSec < 5) intervalSec = 5;
         minIntervalInput.value = intervalSec;
@@ -448,6 +478,13 @@
     // --- メイン処理 ---
     async function startTracking() {
         if (isTracking) return;
+        
+        // 1. Quota制限チェック
+        if (!checkQuotaSafe()) {
+            alert("本日のAPI使用上限に達しているため開始できません。\n(太平洋時間 0時 にリセットされます)");
+            return;
+        }
+
         initAudio();
         isDemo = document.getElementById('demoModeCheck').checked;
         isManualSub = document.getElementById('manualSubCheck').checked;
@@ -503,6 +540,13 @@
 
     async function runApiLoop() {
         if (!isTracking) return;
+        
+        // ループごとにQuotaチェック
+        if (!checkQuotaSafe()) {
+            finishSession("API上限到達(自動停止)");
+            return;
+        }
+
         const k = document.getElementById('apiKey').value; const now = Date.now();
         const minMs = parseFloat(document.getElementById('minIntervalSeconds').value)*1000;
         
@@ -530,16 +574,20 @@
             }
             
             let w = Math.max(minMs, nextApiPollingMs); 
-            if(w > 60000) w = 60000; if(isDemo) w = 2000; 
+            if(isDemo) w = 2000; 
             
             setTimeout(runApiLoop, w);
 
         } catch (e) { console.error(e); setTimeout(runApiLoop, 10000); }
     }
 
+    // 単発で統計情報を更新する（手動停止時も呼ぶ）
     async function updateStatsSingle() {
-        if(!isTracking) return;
+        if(!isTracking && !isDemo) return; // デモ以外でTrackingオフなら何もしない（finishSessionの直前呼び出しを除く）
+
         try {
+            if(isDemo) return;
+
             const k = document.getElementById('apiKey').value;
             const v = await fetchVideoDetails(videoId, k);
             const viewers = parseInt(v.liveStreamingDetails.concurrentViewers||0);
@@ -639,27 +687,41 @@
 
     async function finishSession(reason) {
         if(!isTracking) return; 
-        isTracking = false; 
-        if(uiTimerId) clearInterval(uiTimerId); 
-        document.body.classList.remove('tracking');
-        document.getElementById('subManualControls').style.display = 'none';
-        setStatus("📊 最終集計中... (コメント・登録者確認)", "warning");
+        
+        // 1. 集計中表示
+        setStatus("📊 最終集計中... (同接・コメント・登録者確認)", "warning");
+        
         if(!isDemo) {
             try {
+                // 【重要】ボタンを押したタイミングで、強制的に最新の同接を取りに行く
+                // (内部で fetchVideoDetails を呼ぶので、addApiQuota(1) も自動でされる)
+                await updateStatsSingle();
+                
                 const k = document.getElementById('apiKey').value;
-                await fetchComments(k);
+                await fetchComments(k); // addApiQuota(5)
                 if(!isManualSub) {
-                    const c = await fetchChannelDetails(channelId, k);
+                    const c = await fetchChannelDetails(channelId, k); // addApiQuota(1)
                     sessionData.currentSubCount = parseInt(c.statistics.subscriberCount);
                 }
             } catch(e) { console.error("最終集計エラー:", e); }
         }
+
+        // 2. 状態クリア
+        isTracking = false; 
+        if(uiTimerId) clearInterval(uiTimerId); 
+        document.body.classList.remove('tracking');
+        document.getElementById('subManualControls').style.display = 'none';
+
+        // 3. 結果保存
         const pt = calculatePoints();
         const rec = { id: Date.now(), points: pt, startTime: sessionData.startTime.toLocaleString(), endTime: new Date().toLocaleString(), subDiff: Math.max(0, sessionData.currentSubCount - sessionData.startSubCount), firstComments: sessionData.manualFirstComments, totalComments: sessionData.totalComments, reason: reason };
         saveToHistory(rec); setStatus(`終了！結果: ${pt} pt`, "");
+        
         if(reason === "同接低下リセット") { speakText("接続人数が目標を下回ったため、停止しました。おつかれさまでございました！！"); } 
         else { speakText("計測を終了しました。おつかれい！！"); }
-        alert(`おつかれさま！\n理由: ${reason}\n結果: ${pt} pt`); updateSessionInfo();
+        
+        alert(`おつかれさま！\n理由: ${reason}\n結果: ${pt} pt\n(現在の同接: ${sessionData.currentViewers}人 で集計しました)`); 
+        updateSessionInfo();
     }
 
     function calculatePoints() {
@@ -668,15 +730,19 @@
         return (diff * s) + (sessionData.manualFirstComments * f) + (sessionData.totalComments * c);
     }
 
+    // --- APIラッパー関数 (ここでQuotaを加算) ---
     async function fetchVideoDetails(vid, key) {
+        addApiQuota(1); // Cost: 1
         const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails,snippet&id=${vid}&key=${key}`);
         const data = await res.json(); if (data.error) throw new Error(data.error.message); return data.items[0];
     }
     async function fetchChannelDetails(cid, key) {
+        addApiQuota(1); // Cost: 1
         const res = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${cid}&key=${key}`);
         const data = await res.json(); return data.items[0];
     }
     async function fetchComments(key) {
+        addApiQuota(5); // Cost: 5
         let url = `https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId=${liveChatId}&part=id&key=${key}&maxResults=2000`;
         if (nextPageToken) url += `&pageToken=${nextPageToken}`;
         const res = await fetch(url); const data = await res.json();
