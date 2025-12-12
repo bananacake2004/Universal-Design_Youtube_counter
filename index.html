@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (v16)</title>
+    <title>耐久カウンター Jewel Ocean (v18 Smooth)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
     
     <style>
+        /* --- 基本デザイン (v16ベース) --- */
         :root {
             --bg-grad-1: #a18cd1; --bg-grad-2: #fbc2eb;
             --glass-bg: rgba(255, 255, 255, 0.85); --glass-border: rgba(255, 255, 255, 0.6);
@@ -66,15 +67,10 @@
         button:active { transform: scale(0.96); }
         .btn-check { width: 100%; padding: 14px; background: #636e72; color: white; border-radius: 12px; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 10px; }
         
-        /* ■ 修正：ボタンをコンパクトで可愛く ■ */
         .btn-manual { 
             background: linear-gradient(135deg, #74b9ff, #0984e3);
-            color: white; 
-            padding: 5px 24px; /* 上下を薄く、左右は押しやすく */
-            border-radius: 50px; 
-            font-size: 0.9rem; 
-            margin-top: 5px; 
-            width: auto; /* コンテンツに合わせる */
+            color: white; padding: 5px 24px; border-radius: 50px; 
+            font-size: 0.9rem; margin-top: 5px; width: auto; min-width: 80px; white-space: nowrap;
             box-shadow: 0 4px 6px rgba(9, 132, 227, 0.2);
         }
 
@@ -248,14 +244,26 @@
 <div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;">閉じる</button></div></div>
 
 <script>
-    const SAFE_QUOTA_LIMIT = 9000, HISTORY_KEY = "yt_endurance_v16", NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
-    let isTracking = false, lowViewerSeconds = 0, lastStatsTime = 0, nextApiPollingMs = 0, lastCommentReceivedTime = 0;
+    const SAFE_QUOTA_LIMIT = 9000, HISTORY_KEY = "yt_endurance_v18", NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
+    
+    // --- 変数管理 ---
+    let isTracking = false;
+    let uiTimerId = null; // 画面更新用の高速タイマー
+    
+    let lastStatsTime = 0; // 同接チェックした最後の時刻
+    let nextApiPollingMs = 0; // 次のAPI更新までのウェイト
+    let lastCommentReceivedTime = 0;
+    
+    // リセット条件監視用
+    let resetDeadline = null; // リセットが確定する「未来の時刻」
+
     let sessionData = { startTime: null, startSubCount: 0, currentSubCount: 0, totalComments: 0, manualFirstComments: 0, currentViewers: 0 };
     let videoId = "", channelId = "", liveChatId = null, nextPageToken = null;
     let isDemo = false, isManualSub = true;
 
     window.onload = function() { renderHistory(); checkDstAndDisplayResetTime(); calculateSafeIntervals(); updateSessionInfo(); };
 
+    // --- UI・初期化系 ---
     function toggleObs() {
         document.body.classList.toggle('obs-mode');
         document.body.style.backgroundImage = document.body.classList.contains('obs-mode') ? 'none' : '';
@@ -297,6 +305,7 @@
         document.getElementById('minIntervalSeconds').value = sec;
     }
 
+    // --- メイン処理開始 ---
     async function startTracking() {
         if (isTracking) return;
         isDemo = document.getElementById('demoModeCheck').checked;
@@ -304,18 +313,29 @@
         
         if (!isDemo && !validateInputs()) return;
         try {
-            await initSession(); isTracking = true;
+            await initSession(); 
+            isTracking = true;
             document.body.classList.add('tracking');
             if(isManualSub) document.getElementById('subManualControls').style.display = 'block';
             else document.getElementById('subManualControls').style.display = 'none';
 
-            if(isDemo) { setStatus("🧪 デモモード中 (架空のデータです)", "demo"); } 
-            else { setStatus("🚀 計測中！順調です", "active"); }
+            if(isDemo) setStatus("🧪 デモモード中 (架空のデータ)", "demo"); 
+            else setStatus("🚀 計測開始！", "active");
             
-            lastStatsTime = Date.now(); lastCommentReceivedTime = Date.now(); nextApiPollingMs=0;
-            updateSessionInfo(); runMainLoop();
+            lastStatsTime = Date.now(); 
+            lastCommentReceivedTime = Date.now(); 
+            nextApiPollingMs = 0;
+            resetDeadline = null; // リセット
+
+            updateSessionInfo(); 
+            
+            // ループ開始 (API用 + UI更新用)
+            runApiLoop();
+            startUiLoop();
+
         } catch (e) { alert("開始エラー: " + e.message); }
     }
+
     function stopTrackingManual() { if(isTracking) finishSession("手動STOP"); }
 
     async function initSession() {
@@ -339,7 +359,8 @@
         lowViewerSeconds=0; nextPageToken=null; updateDisplay();
     }
 
-    async function runMainLoop() {
+    // --- APIループ (データの取得のみ担当) ---
+    async function runApiLoop() {
         if (!isTracking) return;
         const k = document.getElementById('apiKey').value; const now = Date.now();
         const minMs = parseFloat(document.getElementById('minIntervalSeconds').value)*1000;
@@ -347,52 +368,86 @@
         try {
             if(isDemo) { await demoSimulate(); } else {
                 await fetchComments(k);
+                // 30分コメント無しチェック
                 if (Date.now()-lastCommentReceivedTime >= NO_COMMENT_LIMIT_MS) { finishSession("コメント停止(30分)"); return; }
                 
+                // 50秒経過で同接更新
                 if (now - lastStatsTime >= 50000) {
                     const v = await fetchVideoDetails(videoId, k); const c = await fetchChannelDetails(channelId, k);
                     sessionData.currentViewers = parseInt(v.liveStreamingDetails.concurrentViewers||0);
                     if(!isManualSub) { sessionData.currentSubCount = parseInt(c.statistics.subscriberCount); }
-                    
-                    const elapsedSec = (now - lastStatsTime) / 1000;
-                    lastStatsTime = Date.now(); checkResetCondition(elapsedSec);
+                    lastStatsTime = Date.now();
                 }
             }
-            updateDisplay();
-            let w = Math.max(minMs, nextApiPollingMs); if(w > 60000) w = 60000; if(isDemo) w = 2000; 
-            setTimeout(runMainLoop, w);
-        } catch (e) { console.error(e); setTimeout(runMainLoop, 10000); }
+            
+            // 待機時間を計算して再帰
+            let w = Math.max(minMs, nextApiPollingMs); 
+            if(w > 60000) w = 60000;
+            if(isDemo) w = 2000; 
+            setTimeout(runApiLoop, w);
+
+        } catch (e) { console.error(e); setTimeout(runApiLoop, 10000); }
     }
 
+    // --- UI更新ループ (画面表示とカウントダウン担当) ---
+    // ※これが1秒ごとに動いて、滑らかなタイマーを実現する
+    function startUiLoop() {
+        if(uiTimerId) clearInterval(uiTimerId);
+        uiTimerId = setInterval(() => {
+            if(!isTracking) return;
+            
+            updateDisplay(); // 数字の更新
+            
+            // リセット条件チェック & カウントダウン
+            const th = parseInt(document.getElementById('resetViewerThreshold').value);
+            const durMinutes = parseInt(document.getElementById('resetDurationMinutes').value);
+            
+            if (sessionData.currentViewers <= th) {
+                // ピンチ状態
+                if (!resetDeadline) {
+                    // 今から〇分後にリセット期限を設定
+                    resetDeadline = Date.now() + (durMinutes * 60 * 1000);
+                }
+                
+                // 残り時間を計算 (ミリ秒 -> 秒)
+                const remainingMs = resetDeadline - Date.now();
+                const remainingSec = Math.ceil(remainingMs / 1000);
+                
+                if (remainingSec <= 0) {
+                    finishSession("同接低下リセット");
+                } else {
+                    document.getElementById('resetTimer').innerText = remainingSec;
+                    setStatus(`⚠️ 同接${th}人以下！あと${remainingSec}秒`, "warning");
+                }
+            } else {
+                // セーフ状態
+                resetDeadline = null; // 期限をクリア
+                document.getElementById('resetTimer').innerText = "--";
+                if(!isDemo) setStatus("🚀 計測中！順調です", "active");
+            }
+            
+        }, 1000); // 1秒ごとに実行
+    }
+
+    // デモ用
     async function demoSimulate() {
         const add = Math.floor(Math.random() * 4);
         if(add > 0) { sessionData.totalComments += add; lastCommentReceivedTime = Date.now(); }
+        // たまに減らす
         sessionData.currentViewers += Math.floor(Math.random() * 5) - 2; 
         if(sessionData.currentViewers < 0) sessionData.currentViewers = 0;
         if(!isManualSub && Math.random() > 0.8) sessionData.currentSubCount += 1;
-        checkResetCondition(2); 
     }
 
     function adjustSub(amount) { if(!isTracking) return; sessionData.currentSubCount += amount; updateDisplay(); }
 
-    function checkResetCondition(sec) {
-        const th = parseInt(document.getElementById('resetViewerThreshold').value);
-        const dur = parseInt(document.getElementById('resetDurationMinutes').value)*60;
-        if (sessionData.currentViewers <= th) {
-            lowViewerSeconds += sec;
-            const rem = dur - lowViewerSeconds;
-            document.getElementById('resetTimer').innerText = rem > 0 ? Math.floor(rem) : 0;
-            setStatus(`⚠️ 同接${th}人以下が続いてるよ`, "warning");
-            if (lowViewerSeconds >= dur) finishSession("同接低下リセット");
-        } else {
-            lowViewerSeconds = 0; document.getElementById('resetTimer').innerText = "--";
-            if(!isDemo) setStatus("🚀 計測中！順調です", "active");
-        }
-    }
-
     function finishSession(reason) {
-        isTracking = false; document.body.classList.remove('tracking');
+        isTracking = false; 
+        if(uiTimerId) clearInterval(uiTimerId); // UIループ停止
+        
+        document.body.classList.remove('tracking');
         document.getElementById('subManualControls').style.display = 'none';
+        
         const pt = calculatePoints();
         const rec = { id: Date.now(), points: pt, startTime: sessionData.startTime.toLocaleString(), endTime: new Date().toLocaleString(), subDiff: Math.max(0, sessionData.currentSubCount - sessionData.startSubCount), firstComments: sessionData.manualFirstComments, totalComments: sessionData.totalComments, reason: reason };
         saveToHistory(rec); setStatus(`終了！結果: ${pt} pt`, "");
@@ -405,6 +460,7 @@
         return (diff * s) + (sessionData.manualFirstComments * f) + (sessionData.totalComments * c);
     }
 
+    // --- API関数群 ---
     async function fetchVideoDetails(vid, key) {
         const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails,snippet&id=${vid}&key=${key}`);
         const data = await res.json(); if (data.error) throw new Error(data.error.message); return data.items[0];
@@ -422,6 +478,7 @@
     }
 
     function addFirstComment() { if(isTracking){ sessionData.manualFirstComments++; updateDisplay(); } }
+    
     function updateDisplay() {
         const subDiff = Math.max(0, sessionData.currentSubCount - sessionData.startSubCount);
         document.getElementById('dispSubsVal').innerText = sessionData.currentSubCount.toLocaleString();
