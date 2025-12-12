@@ -1,738 +1,285 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (Final Fixed)</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
-    
-    <style>
-        /* --- 基本デザイン --- */
-        :root {
-            --bg-grad-1: #a18cd1; --bg-grad-2: #fbc2eb;
-            --glass-bg: rgba(255, 255, 255, 0.85); --glass-border: rgba(255, 255, 255, 0.6);
-            --text-main: #2d3436; --text-sub: #636e72;
-            --btn-blue: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --btn-red: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
-            --accent-color: #6c5ce7;
-            --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-        }
-        body {
-            font-family: "Zen Maru Gothic", sans-serif; margin: 0; padding: 20px; color: var(--text-main); min-height: 100vh;
-            background-image: linear-gradient(120deg, #89f7fe 0%, #66a6ff 100%);
-            background-attachment: fixed; overflow-x: hidden;
-        }
-        .bubbles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; pointer-events: none; }
-        .bubble { position: absolute; bottom: -100px; background-color: rgba(255, 255, 255, 0.3); border-radius: 50%; animation: rise 15s infinite ease-in; }
-        .bubble:nth-child(1) { width: 40px; height: 40px; left: 10%; animation-duration: 8s; }
-        .bubble:nth-child(2) { width: 20px; height: 20px; left: 20%; animation-duration: 5s; animation-delay: 1s; }
-        .bubble:nth-child(3) { width: 50px; height: 50px; left: 35%; animation-duration: 10s; animation-delay: 2s; }
-        @keyframes rise { 0% { bottom: -100px; transform: translateX(0); } 50% { transform: translateX(100px); } 100% { bottom: 1080px; transform: translateX(-200px); } }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>耐久カウンター Jewel Ocean (Final Fixed)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- 基本デザイン --- */
+        :root {
+            --bg-grad-1: #a18cd1; --bg-grad-2: #fbc2eb;
+            --glass-bg: rgba(255, 255, 255, 0.85); --glass-border: rgba(255, 255, 255, 0.6);
+            --text-main: #2d3436; --text-sub: #636e72;
+            --btn-blue: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --btn-red: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+            --accent-color: #6c5ce7;
+            --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        }
+        body {
+            font-family: "Zen Maru Gothic", sans-serif; margin: 0; padding: 20px; color: var(--text-main); min-height: 100vh;
+            background-image: linear-gradient(120deg, #89f7fe 0%, #66a6ff 100%);
+            background-attachment: fixed; overflow-x: hidden;
+        }
+        .bubbles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; pointer-events: none; }
+        .bubble { position: absolute; bottom: -100px; background-color: rgba(255, 255, 255, 0.3); border-radius: 50%; animation: rise 15s infinite ease-in; }
+        .bubble:nth-child(1) { width: 40px; height: 40px; left: 10%; animation-duration: 8s; }
+        .bubble:nth-child(2) { width: 20px; height: 20px; left: 20%; animation-duration: 5s; animation-delay: 1s; }
+        .bubble:nth-child(3) { width: 50px; height: 50px; left: 35%; animation-duration: 10s; animation-delay: 2s; }
+        @keyframes rise { 0% { bottom: -100px; transform: translateX(0); } 50% { transform: translateX(100px); } 100% { bottom: 1080px; transform: translateX(-200px); } }
 
-        .container { max-width: 950px; margin: 0 auto; position: relative; z-index: 1; }
-        .glass-card { background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 24px; border: 1px solid var(--glass-border); box-shadow: var(--shadow-glass); padding: 32px; margin-bottom: 24px; transition: transform 0.3s ease; }
-        h2 { font-size: 1.6rem; margin-top: 0; margin-bottom: 20px; color: var(--accent-color); display: flex; align-items: center; gap: 10px; border-bottom: 2px dashed rgba(108, 92, 231, 0.2); padding-bottom: 10px; }
-        
-        .setting-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-        @media (max-width: 700px) { .setting-grid { grid-template-columns: 1fr; } }
-        .input-group { margin-bottom: 20px; }
-        .input-group label { display: block; font-weight: 700; font-size: 1.05rem; margin-bottom: 8px; color: var(--text-main); }
-        .input-group input { width: 100%; padding: 16px; font-size: 1.1rem; border: 2px solid #dfe6e9; border-radius: 16px; background: rgba(255,255,255,0.9); transition: 0.3s; font-family: inherit; box-sizing: border-box; }
-        .input-group input:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.2); }
-        .input-group textarea { width: 100%; padding: 16px; font-size: 0.95rem; border: 2px solid #dfe6e9; border-radius: 16px; background: rgba(255,255,255,0.9); font-family: "Roboot Mono", monospace; box-sizing: border-box; height: 100px; resize: vertical; line-height: 1.4; }
-        .input-group textarea:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.2); }
+        .container { max-width: 950px; margin: 0 auto; position: relative; z-index: 1; }
+        .glass-card { background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 24px; border: 1px solid var(--glass-border); box-shadow: var(--shadow-glass); padding: 32px; margin-bottom: 24px; transition: transform 0.3s ease; }
+        h2 { font-size: 1.6rem; margin-top: 0; margin-bottom: 20px; color: var(--accent-color); display: flex; align-items: center; gap: 10px; border-bottom: 2px dashed rgba(108, 92, 231, 0.2); padding-bottom: 10px; }
+        
+        .setting-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        @media (max-width: 700px) { .setting-grid { grid-template-columns: 1fr; } }
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; font-weight: 700; font-size: 1.05rem; margin-bottom: 8px; color: var(--text-main); }
+        .input-group input { width: 100%; padding: 16px; font-size: 1.1rem; border: 2px solid #dfe6e9; border-radius: 16px; background: rgba(255,255,255,0.9); transition: 0.3s; font-family: inherit; box-sizing: border-box; }
+        .input-group input:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.2); }
+        .input-group textarea { width: 100%; padding: 16px; font-size: 0.95rem; border: 2px solid #dfe6e9; border-radius: 16px; background: rgba(255,255,255,0.9); font-family: "Roboot Mono", monospace; box-sizing: border-box; height: 100px; resize: vertical; line-height: 1.4; }
+        .input-group textarea:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.2); }
 
-        .session-badge { display: inline-block; padding: 8px 16px; background: #fff; border-radius: 50px; font-size: 1.1rem; font-weight: bold; color: var(--accent-color); box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 10px; }
-        .score-area { text-align: center; margin: 30px 0; }
-        .score-title { font-size: 1.1rem; color: var(--text-sub); letter-spacing: 2px; font-weight: bold; }
-        .score-value { font-size: 7rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; background: linear-gradient(to right, #6c5ce7, #ff7675); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 4px 6px rgba(108, 92, 231, 0.2)); margin-top: 10px; }
+        .session-badge { display: inline-block; padding: 8px 16px; background: #fff; border-radius: 50px; font-size: 1.1rem; font-weight: bold; color: var(--accent-color); box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 10px; }
+        .score-area { text-align: center; margin: 30px 0; }
+        .score-title { font-size: 1.1rem; color: var(--text-sub); letter-spacing: 2px; font-weight: bold; }
+        .score-value { font-size: 7rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; background: linear-gradient(to right, #6c5ce7, #ff7675); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 4px 6px rgba(108, 92, 231, 0.2)); margin-top: 10px; }
 
-        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
-        .stat-box { 
-            background: #fff; border-radius: 20px; padding: 24px; 
-            text-align: center; border: 2px solid #f1f2f6; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.03); 
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-        }
-        .stat-num { font-size: 2.2rem; font-weight: 900; color: var(--text-main); line-height: 1.1; }
-        .stat-sub { font-size: 1rem; color: #00b894; font-weight: bold; white-space: nowrap; }
-        .stat-label { 
-            font-size: 0.95rem; color: var(--text-sub); margin-top: 8px; font-weight: bold; 
-            white-space: nowrap; 
-        }
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+        .stat-box { 
+            background: #fff; border-radius: 20px; padding: 24px; 
+            text-align: center; border: 2px solid #f1f2f6; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03); 
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .stat-num { font-size: 2.2rem; font-weight: 900; color: var(--text-main); line-height: 1.1; }
+        .stat-sub { font-size: 1rem; color: #00b894; font-weight: bold; white-space: nowrap; }
+        .stat-label { 
+            font-size: 0.95rem; color: var(--text-sub); margin-top: 8px; font-weight: bold; 
+            white-space: nowrap; 
+        }
 
-        button { border: none; cursor: pointer; font-family: inherit; font-weight: bold; transition: transform 0.2s, box-shadow 0.2s; }
-        button:active { transform: scale(0.96); }
-        .btn-check { width: 100%; padding: 14px; background: #636e72; color: white; border-radius: 12px; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 10px; }
-        
-        .btn-manual { 
-            background: linear-gradient(135deg, #74b9ff, #0984e3);
-            color: white; padding: 5px 24px; border-radius: 50px; 
-            font-size: 0.9rem; margin-top: 5px; width: auto; min-width: 80px; white-space: nowrap;
-            box-shadow: 0 4px 6px rgba(9, 132, 227, 0.2);
-        }
+        button { border: none; cursor: pointer; font-family: inherit; font-weight: bold; transition: transform 0.2s, box-shadow 0.2s; }
+        button:active { transform: scale(0.96); }
+        .btn-check { width: 100%; padding: 14px; background: #636e72; color: white; border-radius: 12px; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 10px; }
+        
+        .btn-manual { 
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            color: white; padding: 5px 24px; border-radius: 50px; 
+            font-size: 0.9rem; margin-top: 5px; width: auto; min-width: 80px; white-space: nowrap;
+            box-shadow: 0 4px 6px rgba(9, 132, 227, 0.2);
+        }
 
-        .btn-start { width: 100%; padding: 24px; font-size: 1.6rem; border-radius: 24px; background: var(--btn-blue); color: white; box-shadow: 0 10px 25px rgba(108, 92, 231, 0.4); border: 2px solid rgba(255,255,255,0.2); }
-        .btn-stop { width: 100%; padding: 24px; font-size: 1.6rem; border-radius: 24px; background: var(--btn-red); color: white; box-shadow: 0 10px 25px rgba(255, 118, 117, 0.4); display: none; border: 2px solid rgba(255,255,255,0.2); }
+        .btn-start { width: 100%; padding: 24px; font-size: 1.6rem; border-radius: 24px; background: var(--btn-blue); color: white; box-shadow: 0 10px 25px rgba(108, 92, 231, 0.4); border: 2px solid rgba(255,255,255,0.2); }
+        .btn-stop { width: 100%; padding: 24px; font-size: 1.6rem; border-radius: 24px; background: var(--btn-red); color: white; box-shadow: 0 10px 25px rgba(255, 118, 117, 0.4); display: none; border: 2px solid rgba(255,255,255,0.2); }
 
-        .obs-toggle { text-align: right; margin-bottom: 10px; }
-        .btn-obs { background: rgba(255,255,255,0.5); padding: 8px 16px; border-radius: 30px; color: var(--text-main); font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px; z-index: 9999; }
-        
-        body.obs-mode { background: transparent; padding: 0; }
-        body.obs-mode .bubbles, body.obs-mode .setting-wrap, body.obs-mode .history-wrap, body.obs-mode .status-bar { display: none; }
-        body.obs-mode .obs-toggle { position: fixed; top: 10px; right: 10px; opacity: 0.2; transition: opacity 0.3s; }
-        body.obs-mode .obs-toggle:hover { opacity: 1; }
-        body.obs-mode .glass-card.score-card { margin: 0; border: 6px solid var(--accent-color); background: rgba(255,255,255,0.95); }
-        
-        .status-bar { padding: 16px; background: #fff; border-radius: 16px; text-align: center; font-weight: bold; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        .status-ok { color: #00b894; border: 2px solid #00b894; background: #edfbf7; }
-        .status-warn { color: #d63031; border: 2px solid #d63031; background: #fdeaea; }
-        .status-demo { color: #e17055; border: 2px solid #e17055; background: #fff3e0; }
-        .status-grace { color: #0984e3; border: 2px solid #0984e3; background: #e3f2fd; }
+        .obs-toggle { text-align: right; margin-bottom: 10px; }
+        .btn-obs { background: rgba(255,255,255,0.5); padding: 8px 16px; border-radius: 30px; color: var(--text-main); font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px; z-index: 9999; }
+        
+        body.obs-mode { background: transparent; padding: 0; }
+        body.obs-mode .bubbles, body.obs-mode .setting-wrap, body.obs-mode .history-wrap, body.obs-mode .status-bar { display: none; }
+        body.obs-mode .obs-toggle { position: fixed; top: 10px; right: 10px; opacity: 0.2; transition: opacity 0.3s; }
+        body.obs-mode .obs-toggle:hover { opacity: 1; }
+        body.obs-mode .glass-card.score-card { margin: 0; border: 6px solid var(--accent-color); background: rgba(255,255,255,0.95); }
+        
+        .status-bar { padding: 16px; background: #fff; border-radius: 16px; text-align: center; font-weight: bold; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .status-ok { color: #00b894; border: 2px solid #00b894; background: #edfbf7; }
+        .status-warn { color: #d63031; border: 2px solid #d63031; background: #fdeaea; }
+        .status-demo { color: #e17055; border: 2px solid #e17055; background: #fff3e0; }
+        .status-grace { color: #0984e3; border: 2px solid #0984e3; background: #e3f2fd; }
 
-        .video-card { display: none; background: #fff; border-radius: 16px; padding: 12px; gap: 15px; align-items: center; margin-bottom: 20px; border: 2px solid #dfe6e9; }
-        .video-card img { width: 100px; height: 56px; object-fit: cover; border-radius: 8px; }
-        
-        .table-wrap { overflow-x: auto; border-radius: 16px; border: 2px solid #f1f2f6; }
-        table { width: 100%; border-collapse: collapse; min-width: 600px; background: #fff; }
-        th { background: #dfe6e9; text-align: center; }
-        th, td { padding: 12px; border-bottom: 1px solid #f1f2f6; text-align: right; }
-        body.tracking .setting-wrap { opacity: 0.5; pointer-events: none; filter: grayscale(0.8); transition: 0.5s; }
-        body.tracking .btn-start { display: none; }
-        body.tracking .btn-stop { display: block; }
-        .modal-ol { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:center; backdrop-filter:blur(5px); }
-        .modal-in { background:#fff; width:90%; max-width:600px; padding:30px; border-radius:24px; max-height:85vh; overflow-y:auto; box-shadow:0 20px 50px rgba(0,0,0,0.3); }
+        .video-card { display: none; background: #fff; border-radius: 16px; padding: 12px; gap: 15px; align-items: center; margin-bottom: 20px; border: 2px solid #dfe6e9; }
+        .video-card img { width: 100px; height: 56px; object-fit: cover; border-radius: 8px; }
+        
+        .table-wrap { overflow-x: auto; border-radius: 16px; border: 2px solid #f1f2f6; }
+        table { width: 100%; border-collapse: collapse; min-width: 600px; background: #fff; }
+        th { background: #dfe6e9; text-align: center; }
+        th, td { padding: 12px; border-bottom: 1px solid #f1f2f6; text-align: right; }
+        body.tracking .setting-wrap { opacity: 0.5; pointer-events: none; filter: grayscale(0.8); transition: 0.5s; }
+        body.tracking .btn-start { display: none; }
+        body.tracking .btn-stop { display: block; }
+        .modal-ol { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:center; backdrop-filter:blur(5px); }
+        .modal-in { background:#fff; width:90%; max-width:600px; padding:30px; border-radius:24px; max-height:85vh; overflow-y:auto; box-shadow:0 20px 50px rgba(0,0,0,0.3); }
 
-        .btn-adj { width:32px; height:32px; border-radius:50%; border:none; color:white; font-weight:bold; cursor:pointer; margin:0 6px; font-size:1rem; display:inline-flex; justify-content:center; align-items:center; }
-        .btn-plus { background:#00b894; box-shadow: 0 4px 8px rgba(0,184,148,0.3); }
-        .btn-minus { background:#d63031; box-shadow: 0 4px 8px rgba(214,48,49,0.3); }
-        
-        .sound-setting { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 15px; margin-top: 15px; padding-top:15px; border-top: 1px dashed #ccc; }
-        .volume-control { display: flex; align-items: center; gap: 8px; }
-        .btn-test { background: #b2bec3; padding: 6px 12px; font-size: 0.85rem; border-radius: 20px; color: white; border: none; cursor: pointer; }
-        .btn-test:hover { background: #636e72; }
-        input[type=range] { width: 300px; cursor: pointer; }
+        .btn-adj { width:32px; height:32px; border-radius:50%; border:none; color:white; font-weight:bold; cursor:pointer; margin:0 6px; font-size:1rem; display:inline-flex; justify-content:center; align-items:center; }
+        .btn-plus { background:#00b894; box-shadow: 0 4px 8px rgba(0,184,148,0.3); }
+        .btn-minus { background:#d63031; box-shadow: 0 4px 8px rgba(214,48,49,0.3); }
+        
+        .sound-setting { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 15px; margin-top: 15px; padding-top:15px; border-top: 1px dashed #ccc; }
+        .volume-control { display: flex; align-items: center; gap: 8px; }
+        .btn-test { background: #b2bec3; padding: 6px 12px; font-size: 0.85rem; border-radius: 20px; color: white; border: none; cursor: pointer; }
+        .btn-test:hover { background: #636e72; }
+        input[type=range] { width: 300px; cursor: pointer; }
 
-        /* APIメーター */
-        .api-meter { background: #fff; padding: 8px 16px; border-radius: 50px; border: 2px solid #dfe6e9; font-weight: bold; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 8px; color: var(--text-sub); }
-        .api-bar-bg { width: 100px; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
-        .api-bar-fill { height: 100%; background: #00b894; width: 0%; transition: width 0.3s; }
-    </style>
+        /* APIメーター */
+        .api-meter { background: #fff; padding: 8px 16px; border-radius: 50px; border: 2px solid #dfe6e9; font-weight: bold; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 8px; color: var(--text-sub); }
+        .api-bar-bg { width: 100px; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
+        .api-bar-fill { height: 100%; background: #00b894; width: 0%; transition: width 0.3s; }
+    </style>
 </head>
 <body>
 
 <div class="bubbles"><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div></div>
 
 <div class="container">
-    <div class="obs-toggle">
-        <button class="btn-obs" onclick="toggleObs()">✨ OBSモード切替 (背景透過)</button>
-    </div>
+    <div class="obs-toggle">
+        <button class="btn-obs" onclick="toggleObs()">✨ OBSモード切替 (背景透過)</button>
+    </div>
 
-    <div id="statusBox" class="status-bar" style="color:#636e72;">
-        👋 準備OK！設定を入力してね
-    </div>
+    <div id="statusBox" class="status-bar" style="color:#636e72;">
+        👋 準備OK！設定を入力してね
+    </div>
 
-    <div class="glass-card setting-wrap">
-        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 20px;">
-            <h2 style="margin:0; border:none;">⚙️ 配信設定</h2>
-            <div class="api-meter">
-                <span>API消費(PT):</span>
-                <div class="api-bar-bg"><div id="apiBar" class="api-bar-fill"></div></div>
-                <span id="apiQuotaDisplay">0 / 10000</span>
-            </div>
-        </div>
-        
-        <div style="display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap;">
-            <div class="input-group" style="flex:1; background:#fff3e0; padding:12px; border-radius:16px; border:1px solid #ffeaa7; margin-bottom:0; min-width:200px;">
-                <label style="margin-bottom:0; cursor:pointer; font-size:0.95rem;">
-                    <input type="checkbox" id="demoModeCheck" style="width:18px; height:18px; vertical-align:middle;">
-                    <span style="vertical-align:middle; color:#d35400;">🧪 <b>デモモード</b> (API消費なし)</span>
-                </label>
-            </div>
-            <div class="input-group" style="flex:1; background:#e3f2fd; padding:12px; border-radius:16px; border:1px solid #bbdefb; margin-bottom:0; min-width:200px;">
-                <label style="margin-bottom:0; cursor:pointer; font-size:0.95rem;">
-                    <input type="checkbox" id="manualSubCheck" checked style="width:18px; height:18px; vertical-align:middle;">
-                    <span style="vertical-align:middle; color:#0d47a1;">👤 <b>登録者数 手動モード</b> (推奨)</span>
-                </label>
-            </div>
-        </div>
+    <div class="glass-card setting-wrap">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 20px;">
+            <h2 style="margin:0; border:none;">⚙️ 配信設定</h2>
+            <div class="api-meter">
+                <span>API消費(PT):</span>
+                <div class="api-bar-bg"><div id="apiBar" class="api-bar-fill"></div></div>
+                <span id="apiQuotaDisplay">0 / 10000</span>
+            </div>
+        </div>
+        
+        <div style="display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap;">
+            <div class="input-group" style="flex:1; background:#fff3e0; padding:12px; border-radius:16px; border:1px solid #ffeaa7; margin-bottom:0; min-width:200px;">
+                <label style="margin-bottom:0; cursor:pointer; font-size:0.95rem;">
+                    <input type="checkbox" id="demoModeCheck" style="width:18px; height:18px; vertical-align:middle;">
+                    <span style="vertical-align:middle; color:#d35400;">🧪 <b>デモモード</b> (API消費なし)</span>
+                </label>
+            </div>
+            <div class="input-group" style="flex:1; background:#e3f2fd; padding:12px; border-radius:16px; border:1px solid #bbdefb; margin-bottom:0; min-width:200px;">
+                <label style="margin-bottom:0; cursor:pointer; font-size:0.95rem;">
+                    <input type="checkbox" id="manualSubCheck" checked style="width:18px; height:18px; vertical-align:middle;">
+                    <span style="vertical-align:middle; color:#0d47a1;">👤 <b>登録者数 手動モード</b> (推奨)</span>
+                </label>
+            </div>
+        </div>
 
-        <div class="setting-grid">
-            <div>
-                <div class="input-group">
-                    <label>⏱️ 目標時間 (時間)</label>
-                    <input type="number" id="targetHours" value="12" min="1" oninput="calculateSafeIntervals()" onkeyup="calculateSafeIntervals()" onchange="calculateSafeIntervals()">
-                </div>
-                <div class="input-group">
-                    <label>🛡️ 推奨間隔 (自動計算)</label>
-                    <input type="text" id="chatIntervalDisplay" value="--" disabled style="background:#f1f2f6; color:#b2bec3;">
-                    <input type="hidden" id="minIntervalSeconds" value="10">
-                </div>
-            </div>
-            <div>
-                <div class="input-group">
-                    <label>📺 YouTube URL</label>
-                    <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=...">
-                </div>
-                <div class="input-group">
-                    <label>🔑 APIキー (複数可/改行区切り)</label>
-                    <textarea id="apiKey" placeholder="AIzaSy...&#13;&#10;AIzaSy...&#13;&#10;(複数入力で制限緩和＆高速化)" oninput="calculateSafeIntervals()"></textarea>
-                </div>
-            </div>
-        </div>
-        
-        <div style="text-align:right; font-size:0.85rem; color:#636e72; margin-top:-15px; margin-bottom:10px;">
-             PTリセット: <span id="apiResetTimeDisplay">--:--</span>
-        </div>
+        <div class="setting-grid">
+            <div>
+                <div class="input-group">
+                    <label>⏱️ 目標時間 (時間)</label>
+                    <input type="number" id="targetHours" value="12" min="1" oninput="calculateSafeIntervals()" onkeyup="calculateSafeIntervals()" onchange="calculateSafeIntervals()">
+                </div>
+                <div class="input-group">
+                    <label>🛡️ 推奨間隔 (自動計算)</label>
+                    <input type="text" id="chatIntervalDisplay" value="--" disabled style="background:#f1f2f6; color:#b2bec3;">
+                    <input type="hidden" id="minIntervalSeconds" value="10">
+                </div>
+            </div>
+            <div>
+                <div class="input-group">
+                    <label>📺 YouTube URL</label>
+                    <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=...">
+                </div>
+                <div class="input-group">
+                    <label style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>🔑 APIキー (複数可/改行区切り)</span>
+                        <span id="apiKeyToggle" onclick="toggleApiKeyVisibility(event)" style="cursor:pointer; font-size:1.5rem; line-height:1; user-select:none; margin-top:-5px;" title="APIキーの表示/非表示を切り替えます">
+                            <span id="keyIcon">👀</span>
+                        </span>
+                    </label>
+                    <textarea id="apiKey" placeholder="AIzaSy...&#13;&#10;AIzaSy...&#13;&#10;(複数入力で制限緩和＆高速化)" oninput="calculateSafeIntervals()"></textarea>
+                </div>
+            </div>
+        </div>
+        
+        <div style="text-align:right; font-size:0.85rem; color:#636e72; margin-top:-15px; margin-bottom:10px;">
+             PTリセット: <span id="apiResetTimeDisplay">--:--</span>
+        </div>
 
-        <button class="btn-check" onclick="previewVideo()">🔍 動画をチェックする</button>
-        <div id="videoCard" class="video-card">
-            <img id="vcThumb" src="" alt="">
-            <div><div id="vcTitle" style="font-weight:bold;"></div><div id="vcChannel" style="font-size:0.9rem; color:#636e72;"></div></div>
-        </div>
+        <button class="btn-check" onclick="previewVideo()">🔍 動画をチェックする</button>
+        <div id="videoCard" class="video-card">
+            <img id="vcThumb" src="" alt="">
+            <div><div id="vcTitle" style="font-weight:bold;"></div><div id="vcChannel" style="font-size:0.9rem; color:#636e72;"></div></div>
+        </div>
 
-        <div style="margin: 24px 0; border-top: 2px dashed rgba(0,0,0,0.1);"></div>
+        <div style="margin: 24px 0; border-top: 2px dashed rgba(0,0,0,0.1);"></div>
 
-        <div class="setting-grid">
-            <div>
-                <div class="input-group"><label>👤 登録者1人 (pt)</label><input type="number" id="ptSub" value="100"></div>
-                <div class="input-group"><label>🎉 初コメ1件 (pt)</label><input type="number" id="ptFirst" value="50"></div>
-            </div>
-            <div>
-                <div class="input-group"><label>💬 コメント1件 (pt)</label><input type="number" id="ptComm" value="1"></div>
-                <div class="input-group"><label>⚠️ リセット条件 (人以下)</label><input type="number" id="resetViewerThreshold" value="10"></div>
-                <div class="input-group"><label>⏳ 継続時間 (分)</label><input type="number" id="resetDurationMinutes" value="5"></div>
-            </div>
-        </div>
-        
-        <div class="sound-setting">
-            <label style="cursor:pointer; font-size:0.9rem; display:flex; align-items:center; gap:5px; margin-right:auto;">
-                <input type="checkbox" id="soundEnabled" checked style="width:18px; height:18px;"> 🔊 警告音を鳴らす
-            </label>
-            <div class="volume-control">
-                <span style="font-size:0.85rem; color:var(--text-sub);">音量</span>
-                <input type="range" id="volumeSlider" min="0" max="1.5" step="0.05" value="0.5">
-                <span id="volValue" style="font-size:0.9rem; font-weight:bold; color:var(--accent-color); width: 45px;">50%</span>
-            </div>
-            <button class="btn-test" onclick="playVolumeTest()">🔊 テスト</button>
-        </div>
-    </div>
+        <div class="setting-grid">
+            <div>
+                <div class="input-group"><label>👤 登録者1人 (pt)</label><input type="number" id="ptSub" value="100"></div>
+                <div class="input-group"><label>🎉 初コメ1件 (pt)</label><input type="number" id="ptFirst" value="50"></div>
+            </div>
+            <div>
+                <div class="input-group"><label>💬 コメント1件 (pt)</label><input type="number" id="ptComm" value="1"></div>
+                <div class="input-group"><label>⚠️ リセット条件 (人以下)</label><input type="number" id="resetViewerThreshold" value="10"></div>
+                <div class="input-group"><label>⏳ 継続時間 (分)</label><input type="number" id="resetDurationMinutes" value="5"></div>
+            </div>
+        </div>
+        
+        <div class="sound-setting">
+            <label style="cursor:pointer; font-size:0.9rem; display:flex; align-items:center; gap:5px; margin-right:auto;">
+                <input type="checkbox" id="soundEnabled" checked style="width:18px; height:18px;"> 🔊 警告音を鳴らす
+            </label>
+            <div class="volume-control">
+                <span style="font-size:0.85rem; color:var(--text-sub);">音量</span>
+                <input type="range" id="volumeSlider" min="0" max="1.5" step="0.05" value="0.5">
+                <span id="volValue" style="font-size:0.9rem; font-weight:bold; color:var(--accent-color); width: 45px;">50%</span>
+            </div>
+            <button class="btn-test" onclick="playVolumeTest()">🔊 テスト</button>
+        </div>
+    </div>
 
-    <div class="glass-card score-card">
-        <div style="text-align:center;">
-            <span class="session-badge">🔥 <span id="challengeCount">1回目</span> の挑戦</span>
-            <div style="font-size:0.9rem; color:var(--text-sub); margin-top:5px;">( 前回スコア: <span id="prevScore" style="font-weight:bold;">--</span> pt )</div>
-        </div>
-        <div class="score-area">
-            <div class="score-title">✨ TOTAL POINTS ✨</div>
-            <div id="totalPoints" class="score-value">0</div>
-        </div>
-        <div class="stats-grid">
-            <div class="stat-box">
-                <span class="stat-num" id="dispSubsVal">0</span>
-                <span class="stat-sub" id="dispSubsInc">(+0)</span>
-                <div id="subManualControls" style="margin-top:10px; display:none;">
-                    <button class="btn-adj btn-minus" onclick="adjustSub(-1)">-</button>
-                    <button class="btn-adj btn-plus" onclick="adjustSub(1)">+</button>
-                </div>
-                <span class="stat-label">👤 登録者数</span>
-            </div>
-            <div class="stat-box">
-                <span class="stat-num" id="dispFirst">0</span>
-                <button class="btn-manual" onclick="addFirstComment()">+1</button>
-                <span class="stat-label">🎉 初コメ (手動)</span>
-            </div>
-            <div class="stat-box">
-                <span class="stat-num" id="dispComm">0</span>
-                <span class="stat-label">💬 総コメント</span>
-                <div style="font-size:0.75rem; color:#b2bec3; margin-top:4px;">(更新: <span id="lastCommTime">--:--:--</span>)</div>
-            </div>
-            <div class="stat-box">
-                <span class="stat-num" id="dispViewers">-</span>
-                <span class="stat-label">👀 現在同接</span>
-            </div>
-        </div>
-        <div style="margin-top:24px; text-align:center; font-size:1.1rem; font-weight:bold; color:var(--text-sub);">
-            リセットまで: あと <span id="resetTimer" style="color:#ff6b6b; font-size:1.6rem;">--</span> 秒
-        </div>
-        <div class="control-area">
-            <button class="btn-start" onclick="startTracking()">🚀 計測スタート！</button>
-            <button class="btn-stop" onclick="stopTrackingManual()">⛔ 計測ストップ (集計して終了)</button>
-        </div>
-    </div>
+    <div class="glass-card score-card">
+        <div style="text-align:center;">
+            <span class="session-badge">🔥 <span id="challengeCount">1回目</span> の挑戦</span>
+            <div style="font-size:0.9rem; color:var(--text-sub); margin-top:5px;">( 前回スコア: <span id="prevScore" style="font-weight:bold;">--</span> pt )</div>
+        </div>
+        <div class="score-area">
+            <div class="score-title">✨ TOTAL POINTS ✨</div>
+            <div id="totalPoints" class="score-value">0</div>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-box">
+                <span class="stat-num" id="dispSubsVal">0</span>
+                <span class="stat-sub" id="dispSubsInc">(+0)</span>
+                <div id="subManualControls" style="margin-top:10px; display:none;">
+                    <button class="btn-adj btn-minus" onclick="adjustSub(-1)">-</button>
+                    <button class="btn-adj btn-plus" onclick="adjustSub(1)">+</button>
+                </div>
+                <span class="stat-label">👤 登録者数</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-num" id="dispFirst">0</span>
+                <button class="btn-manual" onclick="addFirstComment()">+1</button>
+                <span class="stat-label">🎉 初コメ (手動)</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-num" id="dispComm">0</span>
+                <span class="stat-label">💬 総コメント</span>
+                <div style="font-size:0.75rem; color:#b2bec3; margin-top:4px;">(更新: <span id="lastCommTime">--:--:--</span>)</div>
+            </div>
+            <div class="stat-box">
+                <span class="stat-num" id="dispViewers">-</span>
+                <span class="stat-label">👀 現在同接</span>
+            </div>
+        </div>
+        <div style="margin-top:24px; text-align:center; font-size:1.1rem; font-weight:bold; color:var(--text-sub);">
+            リセットまで: あと <span id="resetTimer" style="color:#ff6b6b; font-size:1.6rem;">--</span> 秒
+        </div>
+        <div class="control-area">
+            <button class="btn-start" onclick="startTracking()">🚀 計測スタート！</button>
+            <button class="btn-stop" onclick="stopTrackingManual()">⛔ 計測ストップ (集計して終了)</button>
+        </div>
+    </div>
 
-    <div class="glass-card history-wrap">
-        <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items:center;">
-            <h2 style="margin:0; border:none; font-size:1.3rem;">📜 過去の履歴</h2>
-            <div>
-                <button onclick="downloadCSV()" style="background:#b2bec3; padding:8px 16px; border-radius:20px; color:#fff;">CSV保存</button>
-                <button onclick="clearHistory()" style="background:#ff7675; padding:8px 16px; border-radius:20px; color:#fff; margin-left:5px;">全削除</button>
-            </div>
-        </div>
-        <div class="table-wrap">
-            <table id="historyTable"><thead><tr><th>回</th><th>pt</th><th>開始</th><th>終了</th><th>登録増</th><th>初コメ</th><th>コメ</th><th>理由</th></tr></thead><tbody></tbody></table>
-        </div>
-    </div>
+    <div class="glass-card history-wrap">
+        <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items:center;">
+            <h2 style="margin:0; border:none; font-size:1.3rem;">📜 過去の履歴</h2>
+            <div>
+                <button onclick="downloadCSV()" style="background:#b2bec3; padding:8px 16px; border-radius:20px; color:#fff;">CSV保存</button>
+                <button onclick="clearHistory()" style="background:#ff7675; padding:8px 16px; border-radius:20px; color:#fff; margin-left:5px;">全削除</button>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table id="historyTable"><thead><tr><th>回</th><th>pt</th><th>開始</th><th>終了</th><th>登録増</th><th>初コメ</th><th>コメ</th><th>理由</th></tr></thead><tbody></tbody></table>
+        </div>
+    </div>
 </div>
 
-<div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li><li>※複数アカウントで作成したキーを入力すると制限が緩和されます！</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;">閉じる</button></div></div>
-
-<script>
-    const HISTORY_KEY = "yt_endurance_v21", QUOTA_KEY = "yt_api_quota_pt_v1";
-    const NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
-    const QUOTA_PER_KEY = 10000;
-    
-    let isTracking = false;
-    let uiTimerId = null; 
-    let lastStatsTime = 0; 
-    let nextApiPollingMs = 0; 
-    let lastCommentReceivedTime = 0;
-    let resetDeadline = null; 
-    let nextBeepTime = 0; 
-    let hasWarned1Min = false; 
-    let hasWarned30Sec = false;
-
-    let sessionData = { startTime: null, startSubCount: 0, currentSubCount: 0, totalComments: 0, manualFirstComments: 0, currentViewers: 0 };
-    let videoId = "", channelId = "", liveChatId = null, nextPageToken = null;
-    let isDemo = false, isManualSub = true;
-    
-    // APIローテーション用
-    let apiKeys = [];
-    let currentKeyIndex = 0;
-    
-    let audioCtx = null;
-    let globalVolume = 0.5;
-
-    window.onload = function() { 
-        renderHistory(); 
-        checkDstAndDisplayResetTime(); 
-        calculateSafeIntervals(); 
-        updateSessionInfo();
-        displayApiQuota(); 
-    };
-
-    function initAudio() {
-        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if(audioCtx.state === 'suspended') audioCtx.resume();
-    }
-    const volSlider = document.getElementById('volumeSlider');
-    const volDisplay = document.getElementById('volValue');
-    volSlider.addEventListener('input', (e) => {
-        globalVolume = parseFloat(e.target.value);
-        volDisplay.innerText = Math.round(globalVolume * 100) + "%";
-    });
-    function playVolumeTest() {
-        initAudio();
-        speakText("この音量でいいですか？");
-        setTimeout(playBeepSound, 2000);
-    }
-    function speakText(text) {
-        if (!document.getElementById('soundEnabled').checked) return;
-        const msg = new SpeechSynthesisUtterance(text);
-        msg.lang = "ja-JP";
-        msg.volume = Math.min(globalVolume, 1.0);
-        msg.rate = 1.1; 
-        window.speechSynthesis.speak(msg);
-    }
-    function playBeepSound() {
-        if (!document.getElementById('soundEnabled').checked) return;
-        initAudio();
-        const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = "sine"; osc.frequency.setValueAtTime(880, now); osc.frequency.setValueAtTime(0, now + 0.1); osc.frequency.setValueAtTime(880, now + 0.15); 
-        const beepVol = globalVolume * 0.1; 
-        gain.gain.setValueAtTime(beepVol, now); gain.gain.linearRampToValueAtTime(0, now + 0.3);
-        osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now + 0.3);
-    }
-
-    function toggleObs() {
-        document.body.classList.toggle('obs-mode');
-        document.body.style.backgroundImage = document.body.classList.contains('obs-mode') ? 'none' : '';
-    }
-    function openModal() { document.getElementById('helpModal').style.display = 'flex'; }
-    function closeModal() { document.getElementById('helpModal').style.display = 'none'; }
-    function setStatus(msg, type) {
-        const bar = document.getElementById('statusBox'); bar.innerText = msg; bar.className = 'status-bar';
-        if(type==='active') bar.classList.add('status-ok');
-        if(type==='warning') bar.classList.add('status-warn');
-        if(type==='demo') bar.classList.add('status-demo');
-        if(type==='grace') bar.classList.add('status-grace');
-    }
-
-    function getApiKeys() {
-        const raw = document.getElementById('apiKey').value;
-        if (!raw) return [];
-        let keys = raw.split(/[\n,\s]+/).filter(k => k.trim().length > 0);
-        const uniqueKeys = [...new Set(keys)];
-        if (keys.length !== uniqueKeys.length) {
-            console.warn("重複したAPIキーが含まれていたため、自動で1つにまとめました。");
-        }
-        return uniqueKeys;
-    }
-
-    function getNextApiKey() {
-        if (apiKeys.length === 0) return "";
-        const key = apiKeys[currentKeyIndex];
-        currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
-        return key;
-    }
-
-    async function previewVideo() {
-        if(document.getElementById('demoModeCheck').checked) { alert("デモモード中は動画確認は不要です"); return; }
-        apiKeys = getApiKeys();
-        if (apiKeys.length === 0) { alert("APIキーを入力してください"); return; }
-        const u = document.getElementById('url').value; 
-        if (!u) { alert("URLを入力してください"); return; }
-        const vid = extractVideoId(u); if(!vid) { alert("URLが変かも？"); return; }
-        try {
-            const d = await fetchVideoDetails(vid, apiKeys[0]);
-            document.getElementById('vcThumb').src = d.snippet.thumbnails.medium.url;
-            document.getElementById('vcTitle').innerText = d.snippet.title;
-            document.getElementById('vcChannel').innerText = d.snippet.channelTitle;
-            document.getElementById('videoCard').style.display = "flex";
-        } catch (e) { alert("エラー: " + e.message); }
-    }
-
-    function checkDstAndDisplayResetTime() {
-        const n = new Date();
-        const s = (n.getMonth() > 2 && n.getMonth() < 10); 
-        const resetHour = s ? 16 : 17;
-        document.getElementById('apiResetTimeDisplay').innerText = `${resetHour}:00`;
-        return resetHour;
-    }
-    
-    function getPTDateString() {
-        const d = new Date();
-        return d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
-    }
-
-    function addApiQuota(cost) {
-        if(isDemo || document.getElementById('demoModeCheck').checked) return; 
-        const todayPT = getPTDateString();
-        let record = JSON.parse(localStorage.getItem(QUOTA_KEY) || "{}");
-        if (record.date !== todayPT) { record = { date: todayPT, count: 0 }; }
-        record.count = (record.count || 0) + cost;
-        localStorage.setItem(QUOTA_KEY, JSON.stringify(record));
-        displayApiQuota();
-    }
-
-    function checkQuotaSafe() {
-        if(document.getElementById('demoModeCheck').checked) return true;
-        const todayPT = getPTDateString();
-        let record = JSON.parse(localStorage.getItem(QUOTA_KEY) || "{}");
-        let keys = isTracking ? apiKeys : getApiKeys();
-        if(keys.length === 0 && !isTracking) keys = getApiKeys();
-        const totalLimit = (keys.length > 0 ? keys.length : 1) * QUOTA_PER_KEY;
-        if (record.date !== todayPT) return true; 
-        if (record.count >= totalLimit) return false;
-        return true;
-    }
-
-    function displayApiQuota() {
-        const todayPT = getPTDateString();
-        let record = JSON.parse(localStorage.getItem(QUOTA_KEY) || "{}");
-        if (record.date !== todayPT) { record = { date: todayPT, count: 0 }; }
-        const current = record.count;
-        let keys = getApiKeys();
-        const totalLimit = (keys.length > 0 ? keys.length : 1) * QUOTA_PER_KEY;
-        document.getElementById('apiQuotaDisplay').innerText = `${current} / ${totalLimit}`;
-        const pct = Math.min(100, (current / totalLimit) * 100);
-        const bar = document.getElementById('apiBar');
-        bar.style.width = `${pct}%`;
-        if(current > totalLimit * 0.9) bar.style.background = "#d63031"; 
-        else if(current > totalLimit * 0.7) bar.style.background = "#fdcb6e"; 
-        else bar.style.background = "#00b894"; 
-    }
-
-    function calculateSafeIntervals() {
-        let h = parseFloat(document.getElementById('targetHours').value);
-        if(!h || h <= 0) h = 24;
-        const keys = getApiKeys();
-        const keyCount = keys.length > 0 ? keys.length : 1;
-        const now = new Date();
-        const resetHour = checkDstAndDisplayResetTime();
-        let resetTime = new Date(now);
-        resetTime.setHours(resetHour, 0, 0, 0);
-        if (now >= resetTime) resetTime.setDate(resetTime.getDate() + 1);
-        const endTarget = new Date(now.getTime() + h * 60 * 60 * 1000);
-        let x = 0; let y = 0;
-        const msUntilReset = resetTime - now;
-        if (msUntilReset > 0) { x = Math.min(h, msUntilReset / (1000 * 60 * 60)); }
-        if (endTarget > resetTime) {
-            let remainingMs = endTarget - resetTime;
-            let remainingHours = remainingMs / (1000 * 60 * 60);
-            y = Math.min(remainingHours, 24);
-        }
-        const Z = Math.max(x, y);
-        let limitPerKey = 8500;
-        if (Z <= 6) { limitPerKey = 9800; } 
-        else if (Z < 19) { limitPerKey = 9000; } 
-        else { limitPerKey = 8500; }
-        const totalDailyLimit = limitPerKey * keyCount;
-        let ptsPerHour = totalDailyLimit / (Z + 4);
-        let intervalSec = 3600 / (ptsPerHour / 5);
-        if(intervalSec < 5) intervalSec = 5;
-        const intervalInput = document.getElementById('chatIntervalDisplay');
-        const minIntervalInput = document.getElementById('minIntervalSeconds');
-        intervalInput.style.fontWeight = "bold";
-        intervalInput.value = `🚀 推奨: ${intervalSec.toFixed(1)} 秒 (キー${keyCount}個 / 上限${totalDailyLimit})`;
-        if (intervalSec < 10) intervalInput.style.color = "#d63031"; 
-        else if (intervalSec < 20) intervalInput.style.color = "#e67e22"; 
-        else intervalInput.style.color = "#00b894"; 
-        minIntervalInput.value = intervalSec;
-        displayApiQuota();
-    }
-
-    async function startTracking() {
-        if (isTracking) return;
-        apiKeys = getApiKeys();
-        if(!document.getElementById('demoModeCheck').checked && apiKeys.length === 0) {
-            alert("APIキーを入力してください"); return;
-        }
-        if (!checkQuotaSafe()) {
-            alert("本日のAPI使用上限に達しているため開始できません。\n(キーを追加するか、太平洋時間 0時 までお待ちください)"); return;
-        }
-        initAudio();
-        isDemo = document.getElementById('demoModeCheck').checked;
-        isManualSub = document.getElementById('manualSubCheck').checked;
-        if (!isDemo && !validateInputs()) return;
-        try {
-            await initSession(); 
-            isTracking = true;
-            document.body.classList.add('tracking');
-            if(isManualSub) document.getElementById('subManualControls').style.display = 'block';
-            else document.getElementById('subManualControls').style.display = 'none';
-            if(isDemo) setStatus("🧪 デモモード中 (架空のデータ)", "demo"); 
-            else setStatus("🚀 計測開始！", "active");
-            lastStatsTime = Date.now(); 
-            lastCommentReceivedTime = Date.now(); 
-            nextApiPollingMs = 0;
-            resetDeadline = null; 
-            nextBeepTime = 0; 
-            hasWarned1Min = false;
-            hasWarned30Sec = false;
-            updateSessionInfo(); 
-            runApiLoop();
-            startUiLoop();
-        } catch (e) { alert("開始エラー: " + e.message); }
-    }
-
-    function stopTrackingManual() { if(isTracking) finishSession("手動STOP"); }
-
-    async function initSession() {
-        if(isDemo) {
-            sessionData = { startTime: new Date(), startSubCount: 10000, currentSubCount: 10000, totalComments: 0, manualFirstComments: 0, currentViewers: 50 };
-            lowViewerSeconds=0; nextPageToken=null; updateDisplay(); return;
-        }
-        videoId = extractVideoId(document.getElementById('url').value);
-        const key = getNextApiKey();
-        const v = await fetchVideoDetails(videoId, key);
-        if (!v.liveStreamingDetails?.activeLiveChatId) throw new Error("配信中じゃないかも");
-        liveChatId = v.liveStreamingDetails.activeLiveChatId; channelId = v.snippet.channelId;
-        const key2 = getNextApiKey();
-        const c = await fetchChannelDetails(channelId, key2);
-        let initialSub = parseInt(c.statistics.subscriberCount);
-        if(isManualSub) {
-            let input = prompt(`現在APIが取得した登録者数は「${initialSub}」です。\n正確な開始時の登録者数を入力してください:`, initialSub);
-            if(input !== null && !isNaN(parseInt(input))) { initialSub = parseInt(input); }
-        }
-        sessionData = { startTime: new Date(), startSubCount: initialSub, currentSubCount: initialSub, totalComments: 0, manualFirstComments: 0, currentViewers: parseInt(v.liveStreamingDetails.concurrentViewers||0) };
-        lowViewerSeconds=0; nextPageToken=null; updateDisplay();
-    }
-
-    async function runApiLoop() {
-        if (!isTracking) return;
-        if (!checkQuotaSafe()) { finishSession("API上限到達(自動停止)"); return; }
-        const now = Date.now();
-        const minMs = parseFloat(document.getElementById('minIntervalSeconds').value)*1000;
-        let isEmergency = false;
-        if(resetDeadline) {
-            const remaining = resetDeadline - now;
-            if(remaining > 0 && remaining < 20000) isEmergency = true;
-        }
-        try {
-            if(isDemo) { await demoSimulate(); } else {
-                if(!isEmergency) {
-                    const key = getNextApiKey();
-                    await fetchComments(key);
-                } else { console.log("緊急モード: コメント取得を一時停止中..."); }
-                if (Date.now()-lastCommentReceivedTime >= NO_COMMENT_LIMIT_MS) { finishSession("コメント停止(30分)"); return; }
-                if (now - lastStatsTime >= 50000 && !isEmergency) { await updateStatsSingle(); }
-            }
-            let w = Math.max(minMs, nextApiPollingMs); 
-            if(isDemo) w = 2000; 
-            setTimeout(runApiLoop, w);
-        } catch (e) { console.error(e); setTimeout(runApiLoop, 10000); }
-    }
-
-    async function updateStatsSingle() {
-        if(!isTracking && !isDemo) return; 
-        try {
-            if(isDemo) return;
-            const key = getNextApiKey();
-            const v = await fetchVideoDetails(videoId, key);
-            const viewers = parseInt(v.liveStreamingDetails.concurrentViewers||0);
-            sessionData.currentViewers = viewers;
-            if(!isManualSub && Math.random() > 0.9) {
-                const key2 = getNextApiKey();
-                const c = await fetchChannelDetails(channelId, key2);
-                sessionData.currentSubCount = parseInt(c.statistics.subscriberCount);
-            }
-            lastStatsTime = Date.now();
-            updateDisplay();
-        } catch(e) { console.error("Stats update failed:", e); }
-    }
-
-    function startUiLoop() {
-        if(uiTimerId) clearInterval(uiTimerId);
-        uiTimerId = setInterval(() => {
-            if(!isTracking) return;
-            updateDisplay(); 
-            const th = parseInt(document.getElementById('resetViewerThreshold').value);
-            const durMinutes = parseInt(document.getElementById('resetDurationMinutes').value);
-            if (sessionData.currentViewers <= th) {
-                if (!resetDeadline) {
-                    resetDeadline = Date.now() + (durMinutes * 60 * 1000);
-                    speakText("接続人数が目標値を下回りました"); 
-                    nextBeepTime = Date.now() + 60000;
-                    hasWarned1Min = false; hasWarned30Sec = false;
-                }
-                if (Date.now() >= nextBeepTime) { playBeepSound(); nextBeepTime = Date.now() + 60000; }
-                const remainingMs = resetDeadline - Date.now();
-                const remainingSec = Math.ceil(remainingMs / 1000);
-                if ([30, 10, 5, 1].includes(remainingSec) && !isDemo) {
-                      setStatus(`⚠️ 緊急確認中... (あと${remainingSec}秒)`, "warning"); updateStatsSingle();
-                }
-                if (remainingSec <= 60 && remainingSec > 0 && !hasWarned1Min) { speakText("のこり1分です"); hasWarned1Min = true; }
-                if (remainingSec <= 30 && remainingSec > 0 && !hasWarned30Sec) { speakText("30秒前。粘って！"); hasWarned30Sec = true; }
-                if (remainingSec <= 0) { finishSession("同接低下リセット"); } 
-                else {
-                    document.getElementById('resetTimer').innerText = remainingSec;
-                    const currentStatus = document.getElementById('statusBox').innerText;
-                    if(!currentStatus.includes("緊急")) {
-                        if(remainingSec < 20) { setStatus(`⚠️ 集計一時停止中...生存優先！あと${remainingSec}秒`, "warning"); } 
-                        else { setStatus(`⚠️ 同接${th}人以下！あと${remainingSec}秒`, "warning"); }
-                    }
-                }
-            } else {
-                if (resetDeadline) {
-                    speakText("接続人数が目標を上回りました。すごいよ。よく頑張った。えらい");
-                    hasWarned1Min = false; hasWarned30Sec = false;
-                }
-                resetDeadline = null; 
-                document.getElementById('resetTimer').innerText = "--";
-                if(!isDemo) setStatus("🚀 計測中！順調です", "active");
-            }
-        }, 1000); 
-    }
-
-    async function demoSimulate() {
-        const add = Math.floor(Math.random() * 4);
-        if(add > 0) { sessionData.totalComments += add; lastCommentReceivedTime = Date.now(); }
-        let d = new Date();
-        let h = d.getHours();
-        let m = d.getMinutes().toString().padStart(2, '0');
-        let dispH = (h < 6) ? h + 24 : h;
-        document.getElementById('lastCommTime').innerText = `${dispH}:${m}`;
-        sessionData.currentViewers += Math.floor(Math.random() * 5) - 2; 
-        if(sessionData.currentViewers < 0) sessionData.currentViewers = 0;
-        if(!isManualSub && Math.random() > 0.8) sessionData.currentSubCount += 1;
-    }
-
-    function adjustSub(amount) { if(!isTracking) return; sessionData.currentSubCount += amount; updateDisplay(); }
-
-    async function finishSession(reason) {
-        if(!isTracking) return; 
-        setStatus("📊 最終集計中... (同接・コメント・登録者確認)", "warning");
-        if(!isDemo) {
-            try {
-                await updateStatsSingle();
-                const key = getNextApiKey();
-                await fetchComments(key);
-                if(!isManualSub) {
-                    const key2 = getNextApiKey();
-                    const c = await fetchChannelDetails(channelId, key2); 
-                    sessionData.currentSubCount = parseInt(c.statistics.subscriberCount);
-                }
-            } catch(e) { console.error("最終集計エラー:", e); }
-        }
-        isTracking = false; 
-        if(uiTimerId) clearInterval(uiTimerId); 
-        document.body.classList.remove('tracking');
-        document.getElementById('subManualControls').style.display = 'none';
-        const pt = calculatePoints();
-        const rec = { id: Date.now(), points: pt, startTime: sessionData.startTime.toLocaleString(), endTime: new Date().toLocaleString(), subDiff: Math.max(0, sessionData.currentSubCount - sessionData.startSubCount), firstComments: sessionData.manualFirstComments, totalComments: sessionData.totalComments, reason: reason };
-        saveToHistory(rec); setStatus(`終了！結果: ${pt} pt`, "");
-        if(reason === "同接低下リセット") { speakText("接続人数が目標を下回ったため、停止しました。おつかれさまでございました！！"); } 
-        else { speakText("計測を終了しました。おつかれい！！"); }
-        alert(`おつかれさま！\n理由: ${reason}\n結果: ${pt} pt\n(現在の同接: ${sessionData.currentViewers}人 で集計しました)`); 
-        updateSessionInfo();
-    }
-
-    function calculatePoints() {
-        const s = parseInt(document.getElementById('ptSub').value), f = parseInt(document.getElementById('ptFirst').value), c = parseInt(document.getElementById('ptComm').value);
-        const diff = Math.max(0, sessionData.currentSubCount - sessionData.startSubCount);
-        return (diff * s) + (sessionData.manualFirstComments * f) + (sessionData.totalComments * c);
-    }
-
-    // 抜け落ちていた関数を復活させました！
-    function updateDisplay() {
-        const subDiff = Math.max(0, sessionData.currentSubCount - sessionData.startSubCount);
-        document.getElementById('dispSubsVal').innerText = sessionData.currentSubCount.toLocaleString();
-        document.getElementById('dispSubsInc').innerText = `(+${subDiff})`;
-        document.getElementById('dispFirst').innerText = sessionData.manualFirstComments;
-        document.getElementById('dispComm').innerText = sessionData.totalComments;
-        document.getElementById('dispViewers').innerText = sessionData.currentViewers;
-        document.getElementById('totalPoints').innerText = calculatePoints().toLocaleString();
-    }
-
-    async function fetchVideoDetails(vid, key) {
-        addApiQuota(1); 
-        const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails,snippet&id=${vid}&key=${key}`);
-        const data = await res.json(); if (data.error) throw new Error(data.error.message); return data.items[0];
-    }
-    async function fetchChannelDetails(cid, key) {
-        addApiQuota(1); 
-        const res = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${cid}&key=${key}`);
-        const data = await res.json(); return data.items[0];
-    }
-    async function fetchComments(key) {
-        addApiQuota(5); 
-        let url = `https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId=${liveChatId}&part=id&key=${key}&maxResults=2000`;
-        if (nextPageToken) url += `&pageToken=${nextPageToken}`;
-        const res = await fetch(url); const data = await res.json();
-        let d = new Date();
-        let h = d.getHours();
-        let m = d.getMinutes().toString().padStart(2, '0');
-        let dispH = (h < 6) ? h + 24 : h;
-        document.getElementById('lastCommTime').innerText = `${dispH}:${m}`;
-        if (data.items && data.items.length > 0) { sessionData.totalComments += data.items.length; lastCommentReceivedTime = Date.now(); }
-        if (data.nextPageToken) nextPageToken = data.nextPageToken; if (data.pollingIntervalMillis) nextApiPollingMs = data.pollingIntervalMillis;
-    }
-
-    function addFirstComment() { if(isTracking){ sessionData.manualFirstComments++; updateDisplay(); } }
-    function extractVideoId(u){ const m=u.match(/^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/); return (m&&m[7].length==11)?m[7]:false; }
-    function validateInputs(){ if(!document.getElementById('apiKey').value && !document.getElementById('demoModeCheck').checked){ alert("APIキーを入力してください"); return false; } if(!document.getElementById('url').value && !document.getElementById('demoModeCheck').checked){ alert("URLを入力してください"); return false; } return true; }
-    function updateSessionInfo() {
-        let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
-        document.getElementById('challengeCount').innerText = `${h.length + 1}回目`;
-        document.getElementById('prevScore').innerText = h.length > 0 ? h[h.length - 1].points.toLocaleString() : "--";
-    }
-    function saveToHistory(r) { let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); h.push(r); localStorage.setItem(HISTORY_KEY,JSON.stringify(h)); renderHistory(); }
-    function renderHistory() {
-        let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); const tb=document.querySelector('#historyTable tbody'); tb.innerHTML="";
-        h.slice().reverse().forEach((i,x)=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${h.length-x}</td><td style="font-weight:900;color:#e84393;">${i.points}</td><td>${i.startTime}</td><td>${i.endTime}</td><td>+${i.subDiff}</td><td>${i.firstComments}</td><td>${i.totalComments}</td><td>${i.reason}</td>`; tb.appendChild(tr); });
-    }
-    function clearHistory(){ if(confirm("履歴を削除しますか？")){ localStorage.removeItem(HISTORY_KEY); renderHistory(); updateSessionInfo(); } }
-    function downloadCSV(){
-        let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); if(h.length==0)return alert("履歴なし");
-        let c="\uFEFF回数,pt,開始,終了,登録増,初コメ,コメ数,理由\n";
-        h.forEach((i,x)=>c+=`${x+1},${i.points},${i.startTime},${i.endTime},${i.subDiff},${i.firstComments},${i.totalComments},${i.reason}\n`);
-        const l=document.createElement("a"); l.href=URL.createObjectURL(new Blob([c],{type:"text/csv;charset=utf-8;"})); l.download="history.csv"; l.click();
-    }
-</script>
-</body>
-</html>
+<div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順
