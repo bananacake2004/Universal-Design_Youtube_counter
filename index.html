@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (Logic Z)</title>
+    <title>耐久カウンター Jewel Ocean (Multi-Key Edition)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -41,6 +41,9 @@
         .input-group label { display: block; font-weight: 700; font-size: 1.05rem; margin-bottom: 8px; color: var(--text-main); }
         .input-group input { width: 100%; padding: 16px; font-size: 1.1rem; border: 2px solid #dfe6e9; border-radius: 16px; background: rgba(255,255,255,0.9); transition: 0.3s; font-family: inherit; box-sizing: border-box; }
         .input-group input:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.2); }
+        /* テキストエリア用スタイル追加 */
+        .input-group textarea { width: 100%; padding: 16px; font-size: 0.95rem; border: 2px solid #dfe6e9; border-radius: 16px; background: rgba(255,255,255,0.9); font-family: "Roboot Mono", monospace; box-sizing: border-box; height: 100px; resize: vertical; line-height: 1.4; }
+        .input-group textarea:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.2); }
 
         .session-badge { display: inline-block; padding: 8px 16px; background: #fff; border-radius: 50px; font-size: 1.1rem; font-weight: bold; color: var(--accent-color); box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 10px; }
         .score-area { text-align: center; margin: 30px 0; }
@@ -76,9 +79,20 @@
         .btn-stop { width: 100%; padding: 24px; font-size: 1.6rem; border-radius: 24px; background: var(--btn-red); color: white; box-shadow: 0 10px 25px rgba(255, 118, 117, 0.4); display: none; border: 2px solid rgba(255,255,255,0.2); }
 
         .obs-toggle { text-align: right; margin-bottom: 10px; }
-        .btn-obs { background: rgba(255,255,255,0.5); padding: 8px 16px; border-radius: 30px; color: var(--text-main); font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px; }
+        .btn-obs { background: rgba(255,255,255,0.5); padding: 8px 16px; border-radius: 30px; color: var(--text-main); font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px; z-index: 9999; }
+        
+        /* OBSモード時のスタイル調整 */
         body.obs-mode { background: transparent; padding: 0; }
-        body.obs-mode .bubbles, body.obs-mode .setting-wrap, body.obs-mode .history-wrap, body.obs-mode .status-bar, body.obs-mode .obs-toggle { display: none; }
+        body.obs-mode .bubbles, body.obs-mode .setting-wrap, body.obs-mode .history-wrap, body.obs-mode .status-bar { display: none; }
+        
+        /* 修正: OBSモードでもボタンを右上に残す */
+        body.obs-mode .obs-toggle { 
+            position: fixed; top: 10px; right: 10px; 
+            opacity: 0.2; /* 普段は薄く */
+            transition: opacity 0.3s;
+        }
+        body.obs-mode .obs-toggle:hover { opacity: 1; /* カーソルが乗ると濃くなる */ }
+        
         body.obs-mode .glass-card.score-card { margin: 0; border: 6px solid var(--accent-color); background: rgba(255,255,255,0.95); }
         
         .status-bar { padding: 16px; background: #fff; border-radius: 16px; text-align: center; font-weight: bold; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
@@ -167,7 +181,7 @@
             <div>
                 <div class="input-group">
                     <label>⏱️ 目標時間 (時間)</label>
-                    <input type="number" id="targetHours" value="6" min="1" oninput="calculateSafeIntervals()" onkeyup="calculateSafeIntervals()" onchange="calculateSafeIntervals()">
+                    <input type="number" id="targetHours" value="12" min="1" oninput="calculateSafeIntervals()" onkeyup="calculateSafeIntervals()" onchange="calculateSafeIntervals()">
                 </div>
                 <div class="input-group">
                     <label>🛡️ 推奨間隔 (自動計算)</label>
@@ -181,8 +195,8 @@
                     <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=...">
                 </div>
                 <div class="input-group">
-                    <label>🔑 APIキー <span onclick="openModal()" style="font-size:0.8rem; color:var(--accent-color); cursor:pointer; text-decoration:underline;">(取得方法)</span></label>
-                    <input type="password" id="apiKey" placeholder="AIzaSy...">
+                    <label>🔑 APIキー (複数可/改行区切り)</label>
+                    <textarea id="apiKey" placeholder="AIzaSy...&#13;&#10;AIzaSy...&#13;&#10;(複数入力で制限緩和＆高速化)" oninput="calculateSafeIntervals()"></textarea>
                 </div>
             </div>
         </div>
@@ -282,12 +296,12 @@
     </div>
 </div>
 
-<div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;">閉じる</button></div></div>
+<div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li><li>※複数アカウントで作成したキーを入力すると制限が緩和されます！</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;">閉じる</button></div></div>
 
 <script>
     const HISTORY_KEY = "yt_endurance_v21", QUOTA_KEY = "yt_api_quota_pt_v1";
     const NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
-    const MAX_QUOTA = 10000;
+    const QUOTA_PER_KEY = 10000;
     
     let isTracking = false;
     let uiTimerId = null; 
@@ -302,6 +316,10 @@
     let sessionData = { startTime: null, startSubCount: 0, currentSubCount: 0, totalComments: 0, manualFirstComments: 0, currentViewers: 0 };
     let videoId = "", channelId = "", liveChatId = null, nextPageToken = null;
     let isDemo = false, isManualSub = true;
+    
+    // APIローテーション用
+    let apiKeys = [];
+    let currentKeyIndex = 0;
     
     let audioCtx = null;
     let globalVolume = 0.5;
@@ -365,13 +383,36 @@
         if(type==='grace') bar.classList.add('status-grace');
     }
 
+    // APIキーの取得とパース
+    function getApiKeys() {
+        const raw = document.getElementById('apiKey').value;
+        // 改行、カンマ、空白で分割して空文字を除去
+        const keys = raw.split(/[\n,\s]+/).filter(k => k.trim().length > 0);
+        return keys;
+    }
+
+    // 次のAPIキーを取得（ラウンドロビン）
+    function getNextApiKey() {
+        if (apiKeys.length === 0) return "";
+        const key = apiKeys[currentKeyIndex];
+        currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+        return key;
+    }
+
     async function previewVideo() {
         if(document.getElementById('demoModeCheck').checked) { alert("デモモード中は動画確認は不要です"); return; }
-        const u = document.getElementById('url').value; const k = document.getElementById('apiKey').value;
-        if (!u || !k) { alert("URLとAPIキーを入れてね"); return; }
+        
+        apiKeys = getApiKeys();
+        if (apiKeys.length === 0) { alert("APIキーを入力してください"); return; }
+        
+        const u = document.getElementById('url').value; 
+        if (!u) { alert("URLを入力してください"); return; }
+        
         const vid = extractVideoId(u); if(!vid) { alert("URLが変かも？"); return; }
+        
         try {
-            const d = await fetchVideoDetails(vid, k);
+            // プレビュー時は最初のキーを使う
+            const d = await fetchVideoDetails(vid, apiKeys[0]);
             document.getElementById('vcThumb').src = d.snippet.thumbnails.medium.url;
             document.getElementById('vcTitle').innerText = d.snippet.title;
             document.getElementById('vcChannel').innerText = d.snippet.channelTitle;
@@ -412,8 +453,12 @@
         const todayPT = getPTDateString();
         let record = JSON.parse(localStorage.getItem(QUOTA_KEY) || "{}");
         
+        const keys = getApiKeys();
+        const totalLimit = keys.length * QUOTA_PER_KEY;
+
         if (record.date !== todayPT) return true; 
-        if (record.count >= MAX_QUOTA) return false;
+        // 複数キー合計のリミットでチェック
+        if (record.count >= totalLimit) return false;
         return true;
     }
 
@@ -423,70 +468,70 @@
         if (record.date !== todayPT) { record = { date: todayPT, count: 0 }; }
         
         const current = record.count;
-        document.getElementById('apiQuotaDisplay').innerText = `${current} / ${MAX_QUOTA}`;
+        const keys = getApiKeys();
+        const totalLimit = (keys.length > 0 ? keys.length : 1) * QUOTA_PER_KEY;
         
-        const pct = Math.min(100, (current / MAX_QUOTA) * 100);
+        document.getElementById('apiQuotaDisplay').innerText = `${current} / ${totalLimit}`;
+        
+        const pct = Math.min(100, (current / totalLimit) * 100);
         const bar = document.getElementById('apiBar');
         bar.style.width = `${pct}%`;
         
-        if(current > 9000) bar.style.background = "#d63031"; 
-        else if(current > 7000) bar.style.background = "#fdcb6e"; 
+        if(current > totalLimit * 0.9) bar.style.background = "#d63031"; 
+        else if(current > totalLimit * 0.7) bar.style.background = "#fdcb6e"; 
         else bar.style.background = "#00b894"; 
     }
 
-    // --- 【重要】APIリセットを考慮したZ値計算ロジック ---
+    // --- マルチキー対応版 自動計算ロジック ---
     function calculateSafeIntervals() {
         let h = parseFloat(document.getElementById('targetHours').value);
         if(!h || h <= 0) h = 24;
         
+        // キー数を取得
+        const keys = getApiKeys();
+        const keyCount = keys.length > 0 ? keys.length : 1;
+        
         const now = new Date();
         const resetHour = checkDstAndDisplayResetTime();
         
-        // 次のPT 0:00 (JST 16:00 or 17:00) を求める
         let resetTime = new Date(now);
         resetTime.setHours(resetHour, 0, 0, 0);
         if (now >= resetTime) resetTime.setDate(resetTime.getDate() + 1);
         
-        // 終了予定時刻
         const endTarget = new Date(now.getTime() + h * 60 * 60 * 1000);
         
-        // x: リセットまでの時間 (時間単位)
         let x = 0;
         let y = 0;
         
         const msUntilReset = resetTime - now;
         if (msUntilReset > 0) {
-            // もし目標時間がリセットより前なら、xは目標時間そのもの
             x = Math.min(h, msUntilReset / (1000 * 60 * 60));
         }
         
-        // y: リセット後の配信時間。ただし1日24時間を上限とする（最大負荷日）
         if (endTarget > resetTime) {
             let remainingMs = endTarget - resetTime;
             let remainingHours = remainingMs / (1000 * 60 * 60);
-            y = Math.min(remainingHours, 24); // どんなに長くても1日の密度は24h
+            y = Math.min(remainingHours, 24);
         }
 
-        // Z: 負荷が高い方を採用
         const Z = Math.max(x, y);
         
-        // Limit決定ロジック
-        let dailyLimit = 8500;
-        if (Z <= 6) {
-            dailyLimit = 9800;
-        } else if (Z < 19) {
-            dailyLimit = 9000;
-        } else {
-            // 19時間以上
-            dailyLimit = 8500; 
-        }
+        // Limit決定 (キー1つあたり)
+        let limitPerKey = 8500;
+        if (Z <= 6) { limitPerKey = 9800; } 
+        else if (Z < 19) { limitPerKey = 9000; } 
+        else { limitPerKey = 8500; }
+
+        // キー数倍のトータルリミット
+        const totalDailyLimit = limitPerKey * keyCount;
 
         // 時給算出 (Z + 4時間バッファ)
-        let ptsPerHour = dailyLimit / (Z + 4);
+        let ptsPerHour = totalDailyLimit / (Z + 4);
         
         // 間隔計算 (1回5pt消費)
         let intervalSec = 3600 / (ptsPerHour / 5);
 
+        // キーが多ければ爆速にする
         // 安全マージン（5秒以下にはしない）
         if(intervalSec < 5) intervalSec = 5;
 
@@ -494,25 +539,31 @@
         const intervalInput = document.getElementById('chatIntervalDisplay');
         const minIntervalInput = document.getElementById('minIntervalSeconds');
         
-        // 表示用整形
         intervalInput.style.fontWeight = "bold";
-        intervalInput.value = `🐢 推奨: ${intervalSec.toFixed(1)} 秒 (Z=${Z.toFixed(1)}h / 上限${dailyLimit})`;
+        intervalInput.value = `🚀 推奨: ${intervalSec.toFixed(1)} 秒 (キー${keyCount}個 / 上限${totalDailyLimit})`;
         
-        // 色分け
-        if (intervalSec < 20) intervalInput.style.color = "#d63031"; // 赤
-        else if (intervalSec < 40) intervalInput.style.color = "#e67e22"; // オレンジ
-        else intervalInput.style.color = "#00b894"; // 緑
+        if (intervalSec < 10) intervalInput.style.color = "#d63031"; 
+        else if (intervalSec < 20) intervalInput.style.color = "#e67e22"; 
+        else intervalInput.style.color = "#00b894"; 
 
         minIntervalInput.value = intervalSec;
+        
+        // Quota表示も更新
+        displayApiQuota();
     }
 
     // --- メイン処理 ---
     async function startTracking() {
         if (isTracking) return;
         
-        // 1. Quota制限チェック
+        apiKeys = getApiKeys();
+        if(!document.getElementById('demoModeCheck').checked && apiKeys.length === 0) {
+            alert("APIキーを入力してください");
+            return;
+        }
+
         if (!checkQuotaSafe()) {
-            alert("本日のAPI使用上限に達しているため開始できません。\n(太平洋時間 0時 にリセットされます)");
+            alert("本日のAPI使用上限に達しているため開始できません。\n(キーを追加するか、太平洋時間 0時 までお待ちください)");
             return;
         }
 
@@ -553,11 +604,17 @@
             sessionData = { startTime: new Date(), startSubCount: 10000, currentSubCount: 10000, totalComments: 0, manualFirstComments: 0, currentViewers: 50 };
             lowViewerSeconds=0; nextPageToken=null; updateDisplay(); return;
         }
-        const k = document.getElementById('apiKey').value; videoId = extractVideoId(document.getElementById('url').value);
-        const v = await fetchVideoDetails(videoId, k);
+        videoId = extractVideoId(document.getElementById('url').value);
+        
+        // 最初のキーで初期化
+        const key = getNextApiKey();
+        const v = await fetchVideoDetails(videoId, key);
         if (!v.liveStreamingDetails?.activeLiveChatId) throw new Error("配信中じゃないかも");
         liveChatId = v.liveStreamingDetails.activeLiveChatId; channelId = v.snippet.channelId;
-        const c = await fetchChannelDetails(channelId, k);
+        
+        // 別のキーでチャンネル詳細取得（負荷分散）
+        const key2 = getNextApiKey();
+        const c = await fetchChannelDetails(channelId, key2);
         
         let initialSub = parseInt(c.statistics.subscriberCount);
         if(isManualSub) {
@@ -572,27 +629,26 @@
     async function runApiLoop() {
         if (!isTracking) return;
         
-        // ループごとにQuotaチェック
         if (!checkQuotaSafe()) {
             finishSession("API上限到達(自動停止)");
             return;
         }
 
-        const k = document.getElementById('apiKey').value; const now = Date.now();
+        const now = Date.now();
         const minMs = parseFloat(document.getElementById('minIntervalSeconds').value)*1000;
         
         let isEmergency = false;
         if(resetDeadline) {
             const remaining = resetDeadline - now;
-            if(remaining > 0 && remaining < 20000) {
-                isEmergency = true;
-            }
+            if(remaining > 0 && remaining < 20000) isEmergency = true;
         }
 
         try {
             if(isDemo) { await demoSimulate(); } else {
                 if(!isEmergency) {
-                    await fetchComments(k);
+                    // APIキーをローテーションして使用
+                    const key = getNextApiKey();
+                    await fetchComments(key);
                 } else {
                     console.log("緊急モード: コメント取得を一時停止中...");
                 }
@@ -618,13 +674,14 @@
         try {
             if(isDemo) return;
 
-            const k = document.getElementById('apiKey').value;
-            const v = await fetchVideoDetails(videoId, k);
+            const key = getNextApiKey();
+            const v = await fetchVideoDetails(videoId, key);
             const viewers = parseInt(v.liveStreamingDetails.concurrentViewers||0);
             sessionData.currentViewers = viewers;
             
             if(!isManualSub && Math.random() > 0.9) {
-                const c = await fetchChannelDetails(channelId, k);
+                const key2 = getNextApiKey();
+                const c = await fetchChannelDetails(channelId, key2);
                 sessionData.currentSubCount = parseInt(c.statistics.subscriberCount);
             }
 
@@ -723,10 +780,11 @@
         if(!isDemo) {
             try {
                 await updateStatsSingle();
-                const k = document.getElementById('apiKey').value;
-                await fetchComments(k);
+                const key = getNextApiKey();
+                await fetchComments(key);
                 if(!isManualSub) {
-                    const c = await fetchChannelDetails(channelId, k); 
+                    const key2 = getNextApiKey();
+                    const c = await fetchChannelDetails(channelId, key2); 
                     sessionData.currentSubCount = parseInt(c.statistics.subscriberCount);
                 }
             } catch(e) { console.error("最終集計エラー:", e); }
@@ -778,33 +836,6 @@
         if (data.nextPageToken) nextPageToken = data.nextPageToken; if (data.pollingIntervalMillis) nextApiPollingMs = data.pollingIntervalMillis;
     }
 
-    function addFirstComment() { if(isTracking){ sessionData.manualFirstComments++; updateDisplay(); } }
-    function updateDisplay() {
-        const subDiff = Math.max(0, sessionData.currentSubCount - sessionData.startSubCount);
-        document.getElementById('dispSubsVal').innerText = sessionData.currentSubCount.toLocaleString();
-        document.getElementById('dispSubsInc').innerText = `(+${subDiff})`;
-        document.getElementById('dispFirst').innerText = sessionData.manualFirstComments;
-        document.getElementById('dispComm').innerText = sessionData.totalComments;
-        document.getElementById('dispViewers').innerText = sessionData.currentViewers;
-        document.getElementById('totalPoints').innerText = calculatePoints().toLocaleString();
-    }
-    function updateSessionInfo() {
-        let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
-        document.getElementById('challengeCount').innerText = `${h.length + 1}回目`;
-        document.getElementById('prevScore').innerText = h.length > 0 ? h[h.length - 1].points.toLocaleString() : "--";
-    }
-    function saveToHistory(r) { let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); h.push(r); localStorage.setItem(HISTORY_KEY,JSON.stringify(h)); renderHistory(); }
-    function renderHistory() {
-        let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); const tb=document.querySelector('#historyTable tbody'); tb.innerHTML="";
-        h.slice().reverse().forEach((i,x)=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${h.length-x}</td><td style="font-weight:900;color:#e84393;">${i.points}</td><td>${i.startTime}</td><td>${i.endTime}</td><td>+${i.subDiff}</td><td>${i.firstComments}</td><td>${i.totalComments}</td><td>${i.reason}</td>`; tb.appendChild(tr); });
-    }
-    function clearHistory(){ if(confirm("履歴を削除しますか？")){ localStorage.removeItem(HISTORY_KEY); renderHistory(); updateSessionInfo(); } }
-    function downloadCSV(){
-        let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); if(h.length==0)return alert("履歴なし");
-        let c="\uFEFF回数,pt,開始,終了,登録増,初コメ,コメ数,理由\n";
-        h.forEach((i,x)=>c+=`${x+1},${i.points},${i.startTime},${i.endTime},${i.subDiff},${i.firstComments},${i.totalComments},${i.reason}\n`);
-        const l=document.createElement("a"); l.href=URL.createObjectURL(new Blob([c],{type:"text/csv;charset=utf-8;"})); l.download="history.csv"; l.click();
-    }
     function extractVideoId(u){ const m=u.match(/^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/); return (m&&m[7].length==11)?m[7]:false; }
     function validateInputs(){ if(!document.getElementById('apiKey').value||!document.getElementById('url').value){ alert("URLとAPIキーを入力してください"); return false; } return true; }
 </script>
