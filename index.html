@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (v19 Sound)</title>
+    <title>耐久カウンター Jewel Ocean (v21 Volume)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
     
     <style>
-        /* --- デザイン設定 (v16ベース) --- */
+        /* --- 基本デザイン (v16ベース) --- */
         :root {
             --bg-grad-1: #a18cd1; --bg-grad-2: #fbc2eb;
             --glass-bg: rgba(255, 255, 255, 0.85); --glass-border: rgba(255, 255, 255, 0.6);
@@ -106,9 +106,16 @@
         .btn-plus { background:#00b894; box-shadow: 0 4px 8px rgba(0,184,148,0.3); }
         .btn-minus { background:#d63031; box-shadow: 0 4px 8px rgba(214,48,49,0.3); }
         
-        /* 音量設定 */
-        .sound-setting { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 10px; }
-        .btn-test { background: #b2bec3; padding: 5px 10px; font-size: 0.8rem; border-radius: 20px; color: white; }
+        /* ■ 追加：音量設定UI ■ */
+        .sound-setting { 
+            display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; 
+            gap: 15px; margin-top: 15px; padding-top:15px; border-top: 1px dashed #ccc;
+        }
+        .volume-control { display: flex; align-items: center; gap: 8px; }
+        .btn-test { background: #b2bec3; padding: 6px 12px; font-size: 0.85rem; border-radius: 20px; color: white; border: none; cursor: pointer; }
+        .btn-test:hover { background: #636e72; }
+        /* スライダーの見た目 */
+        input[type=range] { width: 100px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -190,10 +197,15 @@
         </div>
         
         <div class="sound-setting">
-            <label style="cursor:pointer; font-size:0.9rem; display:flex; align-items:center; gap:5px;">
-                <input type="checkbox" id="soundEnabled" checked> 🔊 音を鳴らす
+            <label style="cursor:pointer; font-size:0.9rem; display:flex; align-items:center; gap:5px; margin-right:auto;">
+                <input type="checkbox" id="soundEnabled" checked style="width:18px; height:18px;"> 🔊 警告音を鳴らす
             </label>
-            <button class="btn-test" onclick="playTestSound()">🔊 テスト</button>
+            
+            <div class="volume-control">
+                <span style="font-size:0.85rem; color:var(--text-sub);">音量</span>
+                <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="0.5">
+            </div>
+            <button class="btn-test" onclick="playVolumeTest()">🔊 テスト</button>
         </div>
     </div>
 
@@ -256,76 +268,75 @@
 <div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;">閉じる</button></div></div>
 
 <script>
-    const SAFE_QUOTA_LIMIT = 9000, HISTORY_KEY = "yt_endurance_v19", NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
+    const SAFE_QUOTA_LIMIT = 9000, HISTORY_KEY = "yt_endurance_v21", NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
     
-    // --- 変数管理 ---
     let isTracking = false;
-    let uiTimerId = null; // 画面更新用の高速タイマー
-    
-    let lastStatsTime = 0; // 同接チェックした最後の時刻
-    let nextApiPollingMs = 0; // 次のAPI更新までのウェイト
+    let uiTimerId = null; 
+    let lastStatsTime = 0; 
+    let nextApiPollingMs = 0; 
     let lastCommentReceivedTime = 0;
-    
-    // リセット条件監視用
-    let resetDeadline = null; // リセットが確定する「未来の時刻」
-    let nextBeepTime = 0; // 次に音を鳴らす時刻 (追加)
+    let resetDeadline = null; 
+    let nextBeepTime = 0; 
+    let hasWarned1Min = false; 
 
     let sessionData = { startTime: null, startSubCount: 0, currentSubCount: 0, totalComments: 0, manualFirstComments: 0, currentViewers: 0 };
     let videoId = "", channelId = "", liveChatId = null, nextPageToken = null;
     let isDemo = false, isManualSub = true;
-
-    // --- 音声関連コンテキスト ---
     let audioCtx = null;
+    let globalVolume = 0.5; // デフォルト音量
 
     window.onload = function() { renderHistory(); checkDstAndDisplayResetTime(); calculateSafeIntervals(); updateSessionInfo(); };
 
-    // --- サウンド再生関数 ---
+    // --- 音量・音声関連 ---
     function initAudio() {
         if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if(audioCtx.state === 'suspended') audioCtx.resume();
     }
 
-    function playTestSound() {
+    // 音量スライダーの監視
+    document.getElementById('volumeSlider').addEventListener('input', (e) => {
+        globalVolume = parseFloat(e.target.value);
+    });
+
+    function playVolumeTest() {
         initAudio();
-        playAlertVoice();
+        speakText("この音量でいいですか？");
         setTimeout(playBeepSound, 2000);
     }
 
-    // 1. ボイス再生「同接低下しました」
-    function playAlertVoice() {
+    function speakText(text) {
         if (!document.getElementById('soundEnabled').checked) return;
-        const msg = new SpeechSynthesisUtterance("同接低下しました");
+        const msg = new SpeechSynthesisUtterance(text);
         msg.lang = "ja-JP";
-        msg.rate = 1.2; // 少し早口
+        msg.volume = globalVolume; // 音量適用
+        msg.rate = 1.1; 
         window.speechSynthesis.speak(msg);
     }
 
-    // 2. 電子音「ピピッ」
     function playBeepSound() {
         if (!document.getElementById('soundEnabled').checked) return;
         initAudio();
-        
         const now = audioCtx.currentTime;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         
         osc.type = "sine";
-        osc.frequency.setValueAtTime(880, now); // ラ(A5)
-        osc.frequency.setValueAtTime(880, now + 0.1);
-        osc.frequency.setValueAtTime(0, now + 0.11); // 休符
-        osc.frequency.setValueAtTime(880, now + 0.2);
+        osc.frequency.setValueAtTime(880, now); 
+        osc.frequency.setValueAtTime(0, now + 0.1);
+        osc.frequency.setValueAtTime(880, now + 0.15); 
         
-        gain.gain.setValueAtTime(0.1, now); // 音量
-        gain.gain.linearRampToValueAtTime(0, now + 0.4);
+        // 音量適用 (ビープ音は大きいので少し控えめにスケーリング)
+        const beepVol = globalVolume * 0.2; 
+        gain.gain.setValueAtTime(beepVol, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.3);
         
         osc.connect(gain);
         gain.connect(audioCtx.destination);
-        
         osc.start(now);
-        osc.stop(now + 0.5);
+        osc.stop(now + 0.3);
     }
 
-    // --- UI・初期化系 ---
+    // --- UI/初期化 ---
     function toggleObs() {
         document.body.classList.toggle('obs-mode');
         document.body.style.backgroundImage = document.body.classList.contains('obs-mode') ? 'none' : '';
@@ -367,13 +378,10 @@
         document.getElementById('minIntervalSeconds').value = sec;
     }
 
-    // --- メイン処理開始 ---
+    // --- メイン処理 ---
     async function startTracking() {
         if (isTracking) return;
-        
-        // 音声コンテキストの初期化 (ユーザー操作必須)
         initAudio();
-
         isDemo = document.getElementById('demoModeCheck').checked;
         isManualSub = document.getElementById('manualSubCheck').checked;
         
@@ -392,10 +400,10 @@
             lastCommentReceivedTime = Date.now(); 
             nextApiPollingMs = 0;
             resetDeadline = null; 
-            nextBeepTime = 0; // 追加
+            nextBeepTime = 0; 
+            hasWarned1Min = false;
 
             updateSessionInfo(); 
-            
             runApiLoop();
             startUiLoop();
 
@@ -425,17 +433,14 @@
         lowViewerSeconds=0; nextPageToken=null; updateDisplay();
     }
 
-    // --- APIループ ---
     async function runApiLoop() {
         if (!isTracking) return;
         const k = document.getElementById('apiKey').value; const now = Date.now();
         const minMs = parseFloat(document.getElementById('minIntervalSeconds').value)*1000;
-        
         try {
             if(isDemo) { await demoSimulate(); } else {
                 await fetchComments(k);
                 if (Date.now()-lastCommentReceivedTime >= NO_COMMENT_LIMIT_MS) { finishSession("コメント停止(30分)"); return; }
-                
                 if (now - lastStatsTime >= 50000) {
                     const v = await fetchVideoDetails(videoId, k); const c = await fetchChannelDetails(channelId, k);
                     sessionData.currentViewers = parseInt(v.liveStreamingDetails.concurrentViewers||0);
@@ -443,45 +448,38 @@
                     lastStatsTime = Date.now();
                 }
             }
-            
             let w = Math.max(minMs, nextApiPollingMs); 
-            if(w > 60000) w = 60000;
-            if(isDemo) w = 2000; 
+            if(w > 60000) w = 60000; if(isDemo) w = 2000; 
             setTimeout(runApiLoop, w);
-
         } catch (e) { console.error(e); setTimeout(runApiLoop, 10000); }
     }
 
-    // --- UI更新ループ (サウンド制御含む) ---
     function startUiLoop() {
         if(uiTimerId) clearInterval(uiTimerId);
         uiTimerId = setInterval(() => {
             if(!isTracking) return;
-            
             updateDisplay(); 
-            
             const th = parseInt(document.getElementById('resetViewerThreshold').value);
             const durMinutes = parseInt(document.getElementById('resetDurationMinutes').value);
             
             if (sessionData.currentViewers <= th) {
-                // ピンチ開始
                 if (!resetDeadline) {
                     resetDeadline = Date.now() + (durMinutes * 60 * 1000);
-                    // ■ 追加：初回警告ボイス
-                    playAlertVoice();
-                    // ■ 追加：次のビープ音を1分後にセット
+                    speakText("接続人数が目標を下回りました"); 
                     nextBeepTime = Date.now() + 60000;
+                    hasWarned1Min = false;
                 }
-                
-                // ■ 追加：1分ごとのビープ音
                 if (Date.now() >= nextBeepTime) {
                     playBeepSound();
-                    nextBeepTime = Date.now() + 60000; // さらに1分後
+                    nextBeepTime = Date.now() + 60000; 
                 }
-
                 const remainingMs = resetDeadline - Date.now();
                 const remainingSec = Math.ceil(remainingMs / 1000);
                 
+                if (remainingSec <= 60 && remainingSec > 0 && !hasWarned1Min) {
+                    speakText("残り1分です"); 
+                    hasWarned1Min = true;
+                }
                 if (remainingSec <= 0) {
                     finishSession("同接低下リセット");
                 } else {
@@ -489,12 +487,10 @@
                     setStatus(`⚠️ 同接${th}人以下！あと${remainingSec}秒`, "warning");
                 }
             } else {
-                // セーフ
                 resetDeadline = null; 
                 document.getElementById('resetTimer').innerText = "--";
                 if(!isDemo) setStatus("🚀 計測中！順調です", "active");
             }
-            
         }, 1000); 
     }
 
@@ -517,6 +513,10 @@
         const pt = calculatePoints();
         const rec = { id: Date.now(), points: pt, startTime: sessionData.startTime.toLocaleString(), endTime: new Date().toLocaleString(), subDiff: Math.max(0, sessionData.currentSubCount - sessionData.startSubCount), firstComments: sessionData.manualFirstComments, totalComments: sessionData.totalComments, reason: reason };
         saveToHistory(rec); setStatus(`終了！結果: ${pt} pt`, "");
+        
+        if(reason === "同接低下リセット") { speakText("接続人数が目標を下回ったため、停止しました。おつかれい！！"); } 
+        else { speakText("計測を終了しました。おつかれい！！"); }
+        
         alert(`おつかれさま！\n理由: ${reason}\n結果: ${pt} pt`); updateSessionInfo();
     }
 
