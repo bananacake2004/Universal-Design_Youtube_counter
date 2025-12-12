@@ -3,223 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean</title>
+    <title>耐久カウンター Jewel Ocean (全回収ver)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            /* 宝石のような深海パレット */
-            --bg-grad-1: #a18cd1;
-            --bg-grad-2: #fbc2eb;
-            --glass-bg: rgba(255, 255, 255, 0.85); /* 濃厚な磨りガラス */
-            --glass-border: rgba(255, 255, 255, 0.6);
-            --text-main: #2d3436;
-            --text-sub: #636e72;
-            
+            --bg-grad-1: #a18cd1; --bg-grad-2: #fbc2eb;
+            --glass-bg: rgba(255, 255, 255, 0.85); --glass-border: rgba(255, 255, 255, 0.6);
+            --text-main: #2d3436; --text-sub: #636e72;
             --btn-blue: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --btn-red: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%); 
-            --btn-red-solid: #ff6b6b; /* 文字が見やすい濃い赤 */
-            
-            --accent-color: #6c5ce7;
+            --btn-red: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+            --btn-red-solid: #ff6b6b; --accent-color: #6c5ce7;
             --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
         }
-
         body {
-            font-family: "Zen Maru Gothic", sans-serif;
-            margin: 0; padding: 20px;
-            color: var(--text-main);
-            min-height: 100vh;
-            /* 高級感のあるグラデーション背景 */
-            background-image: linear-gradient(to top, #c471f5 0%, #fa71cd 100%);
+            font-family: "Zen Maru Gothic", sans-serif; margin: 0; padding: 20px; color: var(--text-main); min-height: 100vh;
             background-image: linear-gradient(120deg, #89f7fe 0%, #66a6ff 100%);
-            background-attachment: fixed;
-            overflow-x: hidden;
+            background-attachment: fixed; overflow-x: hidden;
         }
-
-        /* --- 背景のアニメーションバブル --- */
         .bubbles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; pointer-events: none; }
-        .bubble {
-            position: absolute; bottom: -100px;
-            background-color: rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            animation: rise 15s infinite ease-in;
-        }
+        .bubble { position: absolute; bottom: -100px; background-color: rgba(255, 255, 255, 0.3); border-radius: 50%; animation: rise 15s infinite ease-in; }
         .bubble:nth-child(1) { width: 40px; height: 40px; left: 10%; animation-duration: 8s; }
         .bubble:nth-child(2) { width: 20px; height: 20px; left: 20%; animation-duration: 5s; animation-delay: 1s; }
         .bubble:nth-child(3) { width: 50px; height: 50px; left: 35%; animation-duration: 10s; animation-delay: 2s; }
         .bubble:nth-child(4) { width: 80px; height: 80px; left: 50%; animation-duration: 11s; animation-delay: 0s; }
         .bubble:nth-child(5) { width: 35px; height: 35px; left: 55%; animation-duration: 6s; animation-delay: 1s; }
-        .bubble:nth-child(6) { width: 45px; height: 45px; left: 65%; animation-duration: 8s; animation-delay: 3s; }
-        .bubble:nth-child(7) { width: 90px; height: 90px; left: 70%; animation-duration: 12s; animation-delay: 2s; }
-        .bubble:nth-child(8) { width: 25px; height: 25px; left: 80%; animation-duration: 6s; animation-delay: 2s; }
-        .bubble:nth-child(9) { width: 15px; height: 15px; left: 70%; animation-duration: 5s; animation-delay: 1s; }
-        .bubble:nth-child(10){ width: 90px; height: 90px; left: 25%; animation-duration: 10s; animation-delay: 4s; }
-        @keyframes rise {
-            0% { bottom: -100px; transform: translateX(0); }
-            50% { transform: translateX(100px); }
-            100% { bottom: 1080px; transform: translateX(-200px); }
-        }
+        @keyframes rise { 0% { bottom: -100px; transform: translateX(0); } 50% { transform: translateX(100px); } 100% { bottom: 1080px; transform: translateX(-200px); } }
 
         .container { max-width: 900px; margin: 0 auto; position: relative; z-index: 1; }
-
-        /* --- グラスモーフィズムカード --- */
-        .glass-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-radius: 24px;
-            border: 1px solid var(--glass-border);
-            box-shadow: var(--shadow-glass);
-            padding: 30px;
-            margin-bottom: 24px;
-            transition: transform 0.3s ease;
-        }
+        .glass-card { background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 24px; border: 1px solid var(--glass-border); box-shadow: var(--shadow-glass); padding: 30px; margin-bottom: 24px; transition: transform 0.3s ease; }
+        h2 { font-size: 1.6rem; margin-top: 0; margin-bottom: 20px; color: var(--accent-color); display: flex; align-items: center; gap: 10px; border-bottom: 2px dashed rgba(108, 92, 231, 0.2); padding-bottom: 10px; }
         
-        h2 {
-            font-size: 1.6rem; margin-top: 0; margin-bottom: 20px;
-            color: var(--accent-color);
-            display: flex; align-items: center; gap: 10px;
-            border-bottom: 2px dashed rgba(108, 92, 231, 0.2);
-            padding-bottom: 10px;
-        }
-
-        /* --- ユニバーサルな入力フォーム --- */
         .setting-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
         @media (max-width: 700px) { .setting-grid { grid-template-columns: 1fr; } }
-        
         .input-group { margin-bottom: 20px; }
-        .input-group label {
-            display: block; font-weight: 700; font-size: 1.05rem; margin-bottom: 8px;
-            color: var(--text-main); display: flex; align-items: center; gap: 6px;
-        }
-        .input-group input {
-            width: 100%; padding: 16px; font-size: 1.1rem;
-            border: 2px solid #dfe6e9; border-radius: 16px;
-            background: rgba(255,255,255,0.9);
-            transition: 0.3s; font-family: inherit; box-sizing: border-box;
-        }
-        .input-group input:focus {
-            outline: none; border-color: var(--accent-color);
-            box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.2);
-        }
+        .input-group label { display: block; font-weight: 700; font-size: 1.05rem; margin-bottom: 8px; color: var(--text-main); }
+        .input-group input { width: 100%; padding: 16px; font-size: 1.1rem; border: 2px solid #dfe6e9; border-radius: 16px; background: rgba(255,255,255,0.9); transition: 0.3s; font-family: inherit; box-sizing: border-box; }
+        .input-group input:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.2); }
 
-        /* --- スコアボード (宝石のような輝き) --- */
-        .session-badge {
-            display: inline-block; padding: 8px 16px;
-            background: #fff; border-radius: 50px;
-            font-size: 1.1rem; font-weight: bold; color: var(--accent-color);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 10px;
-        }
+        .session-badge { display: inline-block; padding: 8px 16px; background: #fff; border-radius: 50px; font-size: 1.1rem; font-weight: bold; color: var(--accent-color); box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 10px; }
         .score-area { text-align: center; margin: 30px 0; }
         .score-title { font-size: 1.1rem; color: var(--text-sub); letter-spacing: 2px; font-weight: bold; }
-        .score-value {
-            font-size: 7rem; font-weight: 900;
-            line-height: 1; font-variant-numeric: tabular-nums;
-            background: linear-gradient(to right, #6c5ce7, #ff7675);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 4px 6px rgba(108, 92, 231, 0.2));
-            margin-top: 10px;
-        }
+        .score-value { font-size: 7rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; background: linear-gradient(to right, #6c5ce7, #ff7675); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 4px 6px rgba(108, 92, 231, 0.2)); margin-top: 10px; }
 
-        /* 統計パネル */
         .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-        .stat-box {
-            background: #fff; border-radius: 20px; padding: 20px;
-            text-align: center; border: 2px solid #f1f2f6;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-        }
+        .stat-box { background: #fff; border-radius: 20px; padding: 20px; text-align: center; border: 2px solid #f1f2f6; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
         .stat-num { font-size: 2.2rem; font-weight: 900; color: var(--text-main); line-height: 1.1; }
         .stat-sub { font-size: 1rem; color: #00b894; font-weight: bold; }
         .stat-label { font-size: 0.95rem; color: var(--text-sub); margin-top: 6px; font-weight: bold; }
 
-        /* --- ボタン (押し心地の良さそうなデザイン) --- */
-        button {
-            border: none; cursor: pointer; font-family: inherit; font-weight: bold;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
+        button { border: none; cursor: pointer; font-family: inherit; font-weight: bold; transition: transform 0.2s, box-shadow 0.2s; }
         button:active { transform: scale(0.96); }
+        .btn-check { width: 100%; padding: 14px; background: #636e72; color: white; border-radius: 12px; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 10px; }
+        .btn-manual { background: var(--accent-color); color: white; padding: 8px 16px; border-radius: 50px; font-size: 0.9rem; margin-top: 8px; width: 80%; }
+        .btn-start { width: 100%; padding: 24px; font-size: 1.6rem; border-radius: 24px; background: var(--btn-blue); color: white; box-shadow: 0 10px 25px rgba(108, 92, 231, 0.4); border: 2px solid rgba(255,255,255,0.2); }
+        .btn-stop { width: 100%; padding: 24px; font-size: 1.6rem; border-radius: 24px; background: var(--btn-red); color: white; box-shadow: 0 10px 25px rgba(255, 118, 117, 0.4); display: none; border: 2px solid rgba(255,255,255,0.2); }
 
-        .btn-check {
-            width: 100%; padding: 14px; background: #636e72; color: white; border-radius: 12px;
-            font-size: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 10px;
-        }
-        .btn-manual {
-            background: var(--accent-color); color: white; padding: 8px 16px; border-radius: 50px;
-            font-size: 0.9rem; margin-top: 8px; width: 80%;
-        }
-
-        .control-area { margin-top: 30px; }
-        .btn-start {
-            width: 100%; padding: 24px; font-size: 1.6rem; border-radius: 24px;
-            background: var(--btn-blue); color: white;
-            box-shadow: 0 10px 25px rgba(108, 92, 231, 0.4);
-            border: 2px solid rgba(255,255,255,0.2);
-        }
-        .btn-stop {
-            width: 100%; padding: 24px; font-size: 1.6rem; border-radius: 24px;
-            background: var(--btn-red-solid); color: white;
-            box-shadow: 0 10px 25px rgba(255, 118, 117, 0.4);
-            display: none; border: 2px solid rgba(255,255,255,0.2);
-        }
-
-        /* OBSモード */
         .obs-toggle { text-align: right; margin-bottom: 10px; }
-        .btn-obs {
-            background: rgba(255,255,255,0.5); padding: 8px 16px; border-radius: 30px;
-            color: var(--text-main); font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px;
-        }
+        .btn-obs { background: rgba(255,255,255,0.5); padding: 8px 16px; border-radius: 30px; color: var(--text-main); font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px; }
         body.obs-mode { background: transparent; padding: 0; }
         body.obs-mode .bubbles, body.obs-mode .setting-wrap, body.obs-mode .history-wrap, body.obs-mode .status-bar, body.obs-mode .obs-toggle { display: none; }
         body.obs-mode .glass-card.score-card { margin: 0; border: 6px solid var(--accent-color); background: rgba(255,255,255,0.95); }
-
-        /* その他UI */
+        
+        .demo-toggle { display: inline-flex; align-items: center; gap: 10px; background: #fff; padding: 5px 15px; border-radius: 20px; border: 1px solid #ddd; margin-bottom:10px; }
         .status-bar { padding: 16px; background: #fff; border-radius: 16px; text-align: center; font-weight: bold; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .status-ok { color: #00b894; border: 2px solid #00b894; background: #edfbf7; }
         .status-warn { color: #d63031; border: 2px solid #d63031; background: #fdeaea; }
-        
+        .status-demo { color: #e17055; border: 2px solid #e17055; background: #fff3e0; }
+
         .video-card { display: none; background: #fff; border-radius: 16px; padding: 12px; gap: 15px; align-items: center; margin-bottom: 20px; border: 2px solid #dfe6e9; }
         .video-card img { width: 100px; height: 56px; object-fit: cover; border-radius: 8px; }
-
+        
         .table-wrap { overflow-x: auto; border-radius: 16px; border: 2px solid #f1f2f6; }
         table { width: 100%; border-collapse: collapse; min-width: 600px; background: #fff; }
         th { background: #dfe6e9; text-align: center; }
         th, td { padding: 12px; border-bottom: 1px solid #f1f2f6; text-align: right; }
-
-        /* ロック状態 */
         body.tracking .setting-wrap { opacity: 0.5; pointer-events: none; filter: grayscale(0.8); transition: 0.5s; }
         body.tracking .btn-start { display: none; }
         body.tracking .btn-stop { display: block; }
-        
-        /* モーダル */
         .modal-ol { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:center; backdrop-filter:blur(5px); }
         .modal-in { background:#fff; width:90%; max-width:600px; padding:30px; border-radius:24px; max-height:85vh; overflow-y:auto; box-shadow:0 20px 50px rgba(0,0,0,0.3); }
-
     </style>
 </head>
 <body>
 
-<div class="bubbles">
-    <div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div>
-    <div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div>
-</div>
+<div class="bubbles"><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div></div>
 
 <div class="container">
-    
     <div class="obs-toggle">
         <button class="btn-obs" onclick="toggleObs()">✨ OBSモード切替 (背景透過)</button>
     </div>
 
     <div id="statusBox" class="status-bar" style="color:#636e72;">
-        👋 準備OK！URLを入れて「スタート」を押してね
+        👋 準備OK！設定を入力してね
     </div>
 
     <div class="glass-card setting-wrap">
-        <h2>⚙️ 配信設定 <span style="font-size:0.9rem; margin-left:auto; color:var(--text-sub); font-weight:normal;">リセット時刻: <span id="apiResetTimeDisplay">--:--</span></span></h2>
+        <h2>
+            ⚙️ 配信設定 
+            <span style="font-size:0.9rem; margin-left:auto; color:var(--text-sub); font-weight:normal;">リセット: <span id="apiResetTimeDisplay">--:--</span></span>
+        </h2>
         
+        <div class="input-group" style="background:#fff3e0; padding:10px; border-radius:12px; border:1px solid #ffeaa7;">
+            <label style="margin-bottom:0; cursor:pointer;">
+                <input type="checkbox" id="demoModeCheck" style="width:20px; height:20px; vertical-align:middle;">
+                <span style="vertical-align:middle; color:#d35400;">🧪 <b>デモモード</b> (APIキーなしで動作テストする)</span>
+            </label>
+        </div>
+
         <div class="setting-grid">
             <div>
                 <div class="input-group">
@@ -238,7 +131,7 @@
                     <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=...">
                 </div>
                 <div class="input-group">
-                    <label>🔑 APIキー <span onclick="openModal()" style="font-size:0.8rem; color:var(--accent-color); cursor:pointer; text-decoration:underline; margin-left:5px;">(取得方法)</span></label>
+                    <label>🔑 APIキー <span onclick="openModal()" style="font-size:0.8rem; color:var(--accent-color); cursor:pointer; text-decoration:underline;">(取得方法)</span></label>
                     <input type="password" id="apiKey" placeholder="AIzaSy...">
                 </div>
             </div>
@@ -270,12 +163,10 @@
             <span class="session-badge">🔥 <span id="challengeCount">1回目</span> の挑戦</span>
             <div style="font-size:0.9rem; color:var(--text-sub); margin-top:5px;">( 前回スコア: <span id="prevScore" style="font-weight:bold;">--</span> pt )</div>
         </div>
-
         <div class="score-area">
             <div class="score-title">✨ TOTAL POINTS ✨</div>
             <div id="totalPoints" class="score-value">0</div>
         </div>
-
         <div class="stats-grid">
             <div class="stat-box">
                 <span class="stat-num" id="dispSubsVal">0</span>
@@ -296,11 +187,9 @@
                 <span class="stat-label">👀 現在同接</span>
             </div>
         </div>
-
         <div style="margin-top:24px; text-align:center; font-size:1.1rem; font-weight:bold; color:var(--text-sub);">
             リセットまで: あと <span id="resetTimer" style="color:#ff6b6b; font-size:1.6rem;">--</span> 秒
         </div>
-
         <div class="control-area">
             <button class="btn-start" onclick="startTracking()">🚀 計測スタート！</button>
             <button class="btn-stop" onclick="stopTrackingManual()">⛔ 計測ストップ (終了)</button>
@@ -319,28 +208,22 @@
             <table id="historyTable"><thead><tr><th>回</th><th>pt</th><th>開始</th><th>終了</th><th>登録増</th><th>初コメ</th><th>コメ</th><th>理由</th></tr></thead><tbody></tbody></table>
         </div>
     </div>
-
 </div>
 
-<div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を有効化</li><li>認証情報 → APIキー作成</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;">閉じる</button></div></div>
+<div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;">閉じる</button></div></div>
 
 <script>
-    // --- ロジック部 (機能は前バージョンと同一で安全です) ---
-    const SAFE_QUOTA_LIMIT = 9000, HISTORY_KEY = "yt_endurance_v10", NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
+    const SAFE_QUOTA_LIMIT = 9000, HISTORY_KEY = "yt_endurance_v12", NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
     let isTracking = false, lowViewerSeconds = 0, lastStatsTime = 0, nextApiPollingMs = 0, lastCommentReceivedTime = 0;
     let sessionData = { startTime: null, startSubCount: 0, currentSubCount: 0, totalComments: 0, manualFirstComments: 0, currentViewers: 0 };
     let videoId = "", channelId = "", liveChatId = null, nextPageToken = null;
+    let isDemo = false; 
 
     window.onload = function() { renderHistory(); checkDstAndDisplayResetTime(); calculateSafeIntervals(); updateSessionInfo(); };
 
     function toggleObs() {
         document.body.classList.toggle('obs-mode');
-        // OBSモード時は背景色を透明に
-        if(document.body.classList.contains('obs-mode')) {
-             document.body.style.backgroundImage = 'none';
-        } else {
-             document.body.style.backgroundImage = '';
-        }
+        document.body.style.backgroundImage = document.body.classList.contains('obs-mode') ? 'none' : '';
     }
     function openModal() { document.getElementById('helpModal').style.display = 'flex'; }
     function closeModal() { document.getElementById('helpModal').style.display = 'none'; }
@@ -348,9 +231,11 @@
         const bar = document.getElementById('statusBox'); bar.innerText = msg; bar.className = 'status-bar';
         if(type==='active') bar.classList.add('status-ok');
         if(type==='warning') bar.classList.add('status-warn');
+        if(type==='demo') bar.classList.add('status-demo');
     }
 
     async function previewVideo() {
+        if(document.getElementById('demoModeCheck').checked) { alert("デモモード中は動画確認は不要です"); return; }
         const u = document.getElementById('url').value; const k = document.getElementById('apiKey').value;
         if (!u || !k) { alert("URLとAPIキーを入れてね"); return; }
         const vid = extractVideoId(u); if(!vid) { alert("URLが変かも？"); return; }
@@ -377,11 +262,14 @@
     }
 
     async function startTracking() {
-        if (isTracking || !validateInputs()) return;
+        if (isTracking) return;
+        isDemo = document.getElementById('demoModeCheck').checked;
+        if (!isDemo && !validateInputs()) return;
         try {
             await initSession(); isTracking = true;
             document.body.classList.add('tracking');
-            setStatus("🚀 計測中！順調です", "active");
+            if(isDemo) { setStatus("🧪 デモモード中 (架空のデータです)", "demo"); } 
+            else { setStatus("🚀 計測中！順調です", "active"); }
             lastStatsTime = Date.now(); lastCommentReceivedTime = Date.now(); nextApiPollingMs=0;
             updateSessionInfo(); runMainLoop();
         } catch (e) { alert("開始エラー: " + e.message); }
@@ -389,6 +277,10 @@
     function stopTrackingManual() { if(isTracking) finishSession("手動STOP"); }
 
     async function initSession() {
+        if(isDemo) {
+            sessionData = { startTime: new Date(), startSubCount: 10000, currentSubCount: 10000, totalComments: 0, manualFirstComments: 0, currentViewers: 50 };
+            lowViewerSeconds=0; nextPageToken=null; updateDisplay(); return;
+        }
         const k = document.getElementById('apiKey').value; videoId = extractVideoId(document.getElementById('url').value);
         const v = await fetchVideoDetails(videoId, k);
         if (!v.liveStreamingDetails?.activeLiveChatId) throw new Error("配信中じゃないかも");
@@ -402,19 +294,36 @@
         if (!isTracking) return;
         const k = document.getElementById('apiKey').value; const now = Date.now();
         const minMs = parseFloat(document.getElementById('minIntervalSeconds').value)*1000;
+        
         try {
-            await fetchComments(k);
-            if (Date.now()-lastCommentReceivedTime >= NO_COMMENT_LIMIT_MS) { finishSession("コメント停止(30分)"); return; }
-            if (now - lastStatsTime >= 60000) {
-                const v = await fetchVideoDetails(videoId, k); const c = await fetchChannelDetails(channelId, k);
-                sessionData.currentViewers = parseInt(v.liveStreamingDetails.concurrentViewers||0);
-                sessionData.currentSubCount = parseInt(c.statistics.subscriberCount);
-                lastStatsTime = Date.now(); checkResetCondition(60);
+            if(isDemo) {
+                await demoSimulate();
+            } else {
+                await fetchComments(k);
+                if (Date.now()-lastCommentReceivedTime >= NO_COMMENT_LIMIT_MS) { finishSession("コメント停止(30分)"); return; }
+                if (now - lastStatsTime >= 60000) {
+                    const v = await fetchVideoDetails(videoId, k); const c = await fetchChannelDetails(channelId, k);
+                    sessionData.currentViewers = parseInt(v.liveStreamingDetails.concurrentViewers||0);
+                    sessionData.currentSubCount = parseInt(c.statistics.subscriberCount);
+                    lastStatsTime = Date.now(); checkResetCondition(60);
+                }
             }
+            
             updateDisplay();
             let w = Math.max(minMs, nextApiPollingMs); if(w>60000)w=60000;
+            if(isDemo) w = 2000; 
             setTimeout(runMainLoop, w);
+
         } catch (e) { console.error(e); setTimeout(runMainLoop, 10000); }
+    }
+
+    async function demoSimulate() {
+        const add = Math.floor(Math.random() * 4);
+        if(add > 0) { sessionData.totalComments += add; lastCommentReceivedTime = Date.now(); }
+        sessionData.currentViewers += Math.floor(Math.random() * 5) - 2; 
+        if(sessionData.currentViewers < 0) sessionData.currentViewers = 0;
+        if(Math.random() > 0.8) sessionData.currentSubCount += 1;
+        checkResetCondition(2); 
     }
 
     function checkResetCondition(sec) {
@@ -423,12 +332,12 @@
         if (sessionData.currentViewers <= th) {
             lowViewerSeconds += sec;
             const rem = dur - lowViewerSeconds;
-            document.getElementById('resetTimer').innerText = rem > 0 ? rem : 0;
+            document.getElementById('resetTimer').innerText = rem > 0 ? rem.toFixed(0) : 0;
             setStatus(`⚠️ 同接${th}人以下が続いてるよ`, "warning");
             if (lowViewerSeconds >= dur) finishSession("同接低下リセット");
         } else {
             lowViewerSeconds = 0; document.getElementById('resetTimer').innerText = "--";
-            setStatus("🚀 計測中！順調です", "active");
+            if(!isDemo) setStatus("🚀 計測中！順調です", "active");
         }
     }
 
@@ -454,8 +363,10 @@
         const res = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${cid}&key=${key}`);
         const data = await res.json(); return data.items[0];
     }
+    
+    // ■ 修正ポイント：maxResults=2000 を追加して取りこぼしを防ぐ
     async function fetchComments(key) {
-        let url = `https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId=${liveChatId}&part=id&key=${key}`;
+        let url = `https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId=${liveChatId}&part=id&key=${key}&maxResults=2000`;
         if (nextPageToken) url += `&pageToken=${nextPageToken}`;
         const res = await fetch(url); const data = await res.json();
         if (data.items && data.items.length > 0) { sessionData.totalComments += data.items.length; lastCommentReceivedTime = Date.now(); }
