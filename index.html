@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (v21 Revived 24h-Mode)</title>
+    <title>耐久カウンター Jewel Ocean (Long-Run Support)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -132,7 +132,7 @@
     <div class="glass-card setting-wrap">
         <h2>
             ⚙️ 配信設定 
-            <span style="font-size:0.9rem; margin-left:auto; color:var(--text-sub); font-weight:normal;">リセット: <span id="apiResetTimeDisplay">--:--</span></span>
+            <span style="font-size:0.9rem; margin-left:auto; color:var(--text-sub); font-weight:normal;">リセット(PT 0時): <span id="apiResetTimeDisplay">--:--</span></span>
         </h2>
         
         <div style="display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap;">
@@ -157,7 +157,7 @@
                     <input type="number" id="targetHours" value="24" min="1" oninput="calculateSafeIntervals()">
                 </div>
                 <div class="input-group">
-                    <label>🤖 更新頻度 (自動計算)</label>
+                    <label>🤖 更新頻度 (超長時間対応)</label>
                     <input type="text" id="chatIntervalDisplay" value="--" disabled style="background:#f1f2f6; color:#b2bec3;">
                     <input type="hidden" id="minIntervalSeconds" value="10">
                 </div>
@@ -370,67 +370,79 @@
         } catch (e) { alert("エラー: " + e.message); }
     }
 
+    // --- APIリセット時刻の判定 (PT 0:00) ---
     function checkDstAndDisplayResetTime() {
-        const n = new Date(); const s = (n.getMonth()>2 && n.getMonth()<10); 
-        document.getElementById('apiResetTimeDisplay').innerText = s ? "16:00" : "17:00";
+        const n = new Date();
+        const s = (n.getMonth() > 2 && n.getMonth() < 10); 
+        const resetHour = s ? 16 : 17;
+        document.getElementById('apiResetTimeDisplay').innerText = `${resetHour}:00`;
+        return resetHour;
     }
     
+    // --- 【超長時間対応】APIリセットを考慮したスマート計算ロジック ---
     function calculateSafeIntervals() {
         let h = parseFloat(document.getElementById('targetHours').value);
         if(!h || h <= 0) h = 24;
 
-        // 【ここが24hモードのロジック】
-        // 19時間以上の場合、API節約モード（へそくり2500確保）に切り替える
-        const isLongMode = h >= 19;
+        const now = new Date();
+        const resetHour = checkDstAndDisplayResetTime();
         
+        let resetTime = new Date(now);
+        resetTime.setHours(resetHour, 0, 0, 0);
+
+        if (now >= resetTime) {
+            resetTime.setDate(resetTime.getDate() + 1);
+        }
+
+        const endTarget = new Date(now.getTime() + (h + 4) * 60 * 60 * 1000);
+
+        // 期間A: 今 〜 次のリセットまで
+        const secondsToReset = (resetTime - now) / 1000;
+        
+        // 期間B: 次のリセット 〜 終了予定(+4h)まで
+        // 【重要修正点】
+        // 240時間設定などの場合、ここが膨大な時間になる。
+        // しかしAPI枠は毎日復活するので、「28時間（24h+4hバッファ）」で計算を頭打ちにしてよい。
+        // これにより、何百時間設定でも「28時間分のペース配分」で動き続けることができる。
+        const rawSecondsAfterReset = (endTarget - resetTime) / 1000;
+        const cappedSecondsAfterReset = Math.min(rawSecondsAfterReset, 28 * 3600); 
+
+        const durationA = Math.max(0, secondsToReset);
+        const durationB = Math.max(0, cappedSecondsAfterReset);
+        
+        // 長いほうを採用
+        const targetSeconds = Math.max(durationA, durationB);
+        
+        const estimatedStatsCost = (targetSeconds / 50) * 2;
+        let availableForComments = SAFE_QUOTA_LIMIT - estimatedStatsCost;
+        if(availableForComments < 1000) availableForComments = 1000; 
+
+        const maxCommentCalls = availableForComments / 5; 
+        let intervalSec = targetSeconds / maxCommentCalls;
+
         const intervalInput = document.getElementById('chatIntervalDisplay');
         const minIntervalInput = document.getElementById('minIntervalSeconds');
-        let sec;
-
-        if (isLongMode) {
-            // 24hモード計算式:
-            // 全体Quota(10000) - 緊急用(2500) - 統計コスト(1時間あたり約60pt換算)
-            const statsCostApprox = h * 60; 
-            const emergencyReserve = 2500;
-            const dailyLimit = 10000;
-            
-            const availableForComments = dailyLimit - emergencyReserve - statsCostApprox;
-            // 安全のため最低でも1000ptは残っていると仮定（マイナスにならないよう）
-            const safeCommentQuota = Math.max(availableForComments, 1000);
-            
-            const maxCommentCalls = safeCommentQuota / 5; // 1回5pt
-            const totalSeconds = h * 3600;
-            
-            sec = totalSeconds / maxCommentCalls;
-
-            // UIを赤文字にしてモード通知
-            intervalInput.style.color = "#d63031"; 
-            intervalInput.style.fontWeight = "bold";
-            intervalInput.value = `🐢 24hモード: 約${sec.toFixed(1)} 秒`;
-
-            // まだ計測中でなければステータスバーにも出す
-            if(!isTracking) {
-                setStatus("🐢 24h耐久モード待機中 (API節約ON)", "grace");
-            }
-        } else {
-            // 通常モード（従来の計算式）
-            const totalSec = (h + 4) * 3600; 
-            const statsCost = (totalSec / 50) * 2; 
-            let rem = SAFE_QUOTA_LIMIT - statsCost; 
-            if(rem < 1000) rem = 1000; 
-            sec = totalSec / rem; 
-
-            intervalInput.style.color = "#636e72";
-            intervalInput.style.fontWeight = "normal";
-            intervalInput.value = `通常モード: 約${sec.toFixed(1)} 秒`;
-            
-            if(!isTracking) {
-                setStatus("👋 準備OK！設定を入力してね", "");
-            }
-        }
         
-        if(sec < 5) sec = 5;
-        minIntervalInput.value = sec;
+        let label = "";
+        if (durationA > durationB) {
+            label = `基準:リセット前(${Math.round(durationA/3600)}h)`;
+            intervalInput.style.color = "#d63031"; 
+        } else {
+            // 表示上は実際の残り時間を見せるが、計算は28hでキャップしている
+            let dispHours = Math.round(Math.max(0, rawSecondsAfterReset)/3600);
+            if(rawSecondsAfterReset > 28*3600) {
+                 label = `基準:リセット後(24h循環)`;
+            } else {
+                 label = `基準:リセット後(${dispHours}h)`;
+            }
+            intervalInput.style.color = "#0984e3"; 
+        }
+
+        intervalInput.style.fontWeight = "bold";
+        intervalInput.value = `🐢 ${label} : 約${intervalSec.toFixed(1)} 秒`;
+        
+        if(intervalSec < 5) intervalSec = 5;
+        minIntervalInput.value = intervalSec;
     }
 
     // --- メイン処理 ---
@@ -494,7 +506,6 @@
         const k = document.getElementById('apiKey').value; const now = Date.now();
         const minMs = parseFloat(document.getElementById('minIntervalSeconds').value)*1000;
         
-        // 残り20秒を切っているかチェック
         let isEmergency = false;
         if(resetDeadline) {
             const remaining = resetDeadline - now;
@@ -505,8 +516,6 @@
 
         try {
             if(isDemo) { await demoSimulate(); } else {
-                
-                // 緊急時（残り20秒未満）はコメント取得をスキップして、同接確認に専念させる
                 if(!isEmergency) {
                     await fetchComments(k);
                 } else {
@@ -515,7 +524,6 @@
 
                 if (Date.now()-lastCommentReceivedTime >= NO_COMMENT_LIMIT_MS) { finishSession("コメント停止(30分)"); return; }
                 
-                // 通常の統計更新 (約50秒に1回)
                 if (now - lastStatsTime >= 50000 && !isEmergency) {
                     await updateStatsSingle(); 
                 }
@@ -529,7 +537,6 @@
         } catch (e) { console.error(e); setTimeout(runApiLoop, 10000); }
     }
 
-    // 緊急用：同接数だけを更新 (1pt消費)
     async function updateStatsSingle() {
         if(!isTracking) return;
         try {
@@ -573,7 +580,6 @@
                 const remainingMs = resetDeadline - Date.now();
                 const remainingSec = Math.ceil(remainingMs / 1000);
                 
-                // 直前回避チェック (悪あがき)
                 if ([30, 10, 5, 1].includes(remainingSec) && !isDemo) {
                       setStatus(`⚠️ 緊急確認中... (あと${remainingSec}秒)`, "warning");
                       updateStatsSingle();
@@ -595,7 +601,6 @@
                     document.getElementById('resetTimer').innerText = remainingSec;
                     const currentStatus = document.getElementById('statusBox').innerText;
                     if(!currentStatus.includes("緊急")) {
-                        // 20秒切ったらメッセージを変える
                         if(remainingSec < 20) {
                              setStatus(`⚠️ 集計一時停止中...生存優先！あと${remainingSec}秒`, "warning");
                         } else {
@@ -604,14 +609,11 @@
                     }
                 }
             } else {
-                // ■ 復活時のボイス
                 if (resetDeadline) {
                     speakText("接続人数が目標を上回りました。すごいよ。よく頑張った。えらい");
-                    // 警告フラグもリセット
                     hasWarned1Min = false;
                     hasWarned30Sec = false;
                 }
-
                 resetDeadline = null; 
                 document.getElementById('resetTimer').innerText = "--";
                 if(!isDemo) setStatus("🚀 計測中！順調です", "active");
@@ -622,11 +624,9 @@
     async function demoSimulate() {
         const add = Math.floor(Math.random() * 4);
         if(add > 0) { sessionData.totalComments += add; lastCommentReceivedTime = Date.now(); }
-        // デモモード：もし深夜帯なら24時間表記（25:00等）にする
         let d = new Date();
         let h = d.getHours();
         let m = d.getMinutes().toString().padStart(2, '0');
-        // 朝6時未満(0,1,2,3,4,5)なら +24して表示
         let dispH = (h < 6) ? h + 24 : h;
         document.getElementById('lastCommTime').innerText = `${dispH}:${m}`;
         
@@ -639,14 +639,11 @@
 
     async function finishSession(reason) {
         if(!isTracking) return; 
-        
         isTracking = false; 
         if(uiTimerId) clearInterval(uiTimerId); 
         document.body.classList.remove('tracking');
         document.getElementById('subManualControls').style.display = 'none';
-        
         setStatus("📊 最終集計中... (コメント・登録者確認)", "warning");
-        
         if(!isDemo) {
             try {
                 const k = document.getElementById('apiKey').value;
@@ -657,18 +654,11 @@
                 }
             } catch(e) { console.error("最終集計エラー:", e); }
         }
-
         const pt = calculatePoints();
         const rec = { id: Date.now(), points: pt, startTime: sessionData.startTime.toLocaleString(), endTime: new Date().toLocaleString(), subDiff: Math.max(0, sessionData.currentSubCount - sessionData.startSubCount), firstComments: sessionData.manualFirstComments, totalComments: sessionData.totalComments, reason: reason };
         saveToHistory(rec); setStatus(`終了！結果: ${pt} pt`, "");
-        
-        if(reason === "同接低下リセット") { 
-            speakText("接続人数が目標を下回ったため、停止しました。おつかれさまでございました！！"); 
-        } 
-        else { 
-            speakText("計測を終了しました。おつかれい！！"); 
-        }
-        
+        if(reason === "同接低下リセット") { speakText("接続人数が目標を下回ったため、停止しました。おつかれさまでございました！！"); } 
+        else { speakText("計測を終了しました。おつかれい！！"); }
         alert(`おつかれさま！\n理由: ${reason}\n結果: ${pt} pt`); updateSessionInfo();
     }
 
@@ -690,20 +680,16 @@
         let url = `https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId=${liveChatId}&part=id&key=${key}&maxResults=2000`;
         if (nextPageToken) url += `&pageToken=${nextPageToken}`;
         const res = await fetch(url); const data = await res.json();
-        
-        // 24時間表記対応（深夜0〜5時を24〜29時と表示）
         let d = new Date();
         let h = d.getHours();
         let m = d.getMinutes().toString().padStart(2, '0');
         let dispH = (h < 6) ? h + 24 : h;
         document.getElementById('lastCommTime').innerText = `${dispH}:${m}`;
-        
         if (data.items && data.items.length > 0) { sessionData.totalComments += data.items.length; lastCommentReceivedTime = Date.now(); }
         if (data.nextPageToken) nextPageToken = data.nextPageToken; if (data.pollingIntervalMillis) nextApiPollingMs = data.pollingIntervalMillis;
     }
 
     function addFirstComment() { if(isTracking){ sessionData.manualFirstComments++; updateDisplay(); } }
-    
     function updateDisplay() {
         const subDiff = Math.max(0, sessionData.currentSubCount - sessionData.startSubCount);
         document.getElementById('dispSubsVal').innerText = sessionData.currentSubCount.toLocaleString();
