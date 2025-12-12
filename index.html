@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (v14)</title>
+    <title>耐久カウンター Jewel Ocean (v16)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
     
     <style>
-        /* --- 基本設定 (v13と同じ) --- */
         :root {
             --bg-grad-1: #a18cd1; --bg-grad-2: #fbc2eb;
             --glass-bg: rgba(255, 255, 255, 0.85); --glass-border: rgba(255, 255, 255, 0.6);
@@ -33,8 +32,8 @@
         .bubble:nth-child(5) { width: 35px; height: 35px; left: 55%; animation-duration: 6s; animation-delay: 1s; }
         @keyframes rise { 0% { bottom: -100px; transform: translateX(0); } 50% { transform: translateX(100px); } 100% { bottom: 1080px; transform: translateX(-200px); } }
 
-        .container { max-width: 900px; margin: 0 auto; position: relative; z-index: 1; }
-        .glass-card { background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 24px; border: 1px solid var(--glass-border); box-shadow: var(--shadow-glass); padding: 30px; margin-bottom: 24px; transition: transform 0.3s ease; }
+        .container { max-width: 950px; margin: 0 auto; position: relative; z-index: 1; }
+        .glass-card { background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 24px; border: 1px solid var(--glass-border); box-shadow: var(--shadow-glass); padding: 32px; margin-bottom: 24px; transition: transform 0.3s ease; }
         h2 { font-size: 1.6rem; margin-top: 0; margin-bottom: 20px; color: var(--accent-color); display: flex; align-items: center; gap: 10px; border-bottom: 2px dashed rgba(108, 92, 231, 0.2); padding-bottom: 10px; }
         
         .setting-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
@@ -49,16 +48,36 @@
         .score-title { font-size: 1.1rem; color: var(--text-sub); letter-spacing: 2px; font-weight: bold; }
         .score-value { font-size: 7rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; background: linear-gradient(to right, #6c5ce7, #ff7675); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 4px 6px rgba(108, 92, 231, 0.2)); margin-top: 10px; }
 
-        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-        .stat-box { background: #fff; border-radius: 20px; padding: 20px; text-align: center; border: 2px solid #f1f2f6; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+        .stat-box { 
+            background: #fff; border-radius: 20px; padding: 24px; 
+            text-align: center; border: 2px solid #f1f2f6; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03); 
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
         .stat-num { font-size: 2.2rem; font-weight: 900; color: var(--text-main); line-height: 1.1; }
-        .stat-sub { font-size: 1rem; color: #00b894; font-weight: bold; }
-        .stat-label { font-size: 0.95rem; color: var(--text-sub); margin-top: 6px; font-weight: bold; }
+        .stat-sub { font-size: 1rem; color: #00b894; font-weight: bold; white-space: nowrap; }
+        .stat-label { 
+            font-size: 0.95rem; color: var(--text-sub); margin-top: 8px; font-weight: bold; 
+            white-space: nowrap; 
+        }
 
         button { border: none; cursor: pointer; font-family: inherit; font-weight: bold; transition: transform 0.2s, box-shadow 0.2s; }
         button:active { transform: scale(0.96); }
         .btn-check { width: 100%; padding: 14px; background: #636e72; color: white; border-radius: 12px; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 10px; }
-        .btn-manual { background: var(--accent-color); color: white; padding: 8px 16px; border-radius: 50px; font-size: 0.9rem; margin-top: 8px; width: 80%; }
+        
+        /* ■ 修正：ボタンをコンパクトで可愛く ■ */
+        .btn-manual { 
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            color: white; 
+            padding: 5px 24px; /* 上下を薄く、左右は押しやすく */
+            border-radius: 50px; 
+            font-size: 0.9rem; 
+            margin-top: 5px; 
+            width: auto; /* コンテンツに合わせる */
+            box-shadow: 0 4px 6px rgba(9, 132, 227, 0.2);
+        }
+
         .btn-start { width: 100%; padding: 24px; font-size: 1.6rem; border-radius: 24px; background: var(--btn-blue); color: white; box-shadow: 0 10px 25px rgba(108, 92, 231, 0.4); border: 2px solid rgba(255,255,255,0.2); }
         .btn-stop { width: 100%; padding: 24px; font-size: 1.6rem; border-radius: 24px; background: var(--btn-red); color: white; box-shadow: 0 10px 25px rgba(255, 118, 117, 0.4); display: none; border: 2px solid rgba(255,255,255,0.2); }
 
@@ -86,10 +105,9 @@
         .modal-ol { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:center; backdrop-filter:blur(5px); }
         .modal-in { background:#fff; width:90%; max-width:600px; padding:30px; border-radius:24px; max-height:85vh; overflow-y:auto; box-shadow:0 20px 50px rgba(0,0,0,0.3); }
 
-        /* 手動調整ボタン */
-        .btn-adj { width:30px; height:30px; border-radius:50%; border:none; color:white; font-weight:bold; cursor:pointer; margin:0 5px; }
-        .btn-plus { background:#00b894; }
-        .btn-minus { background:#d63031; }
+        .btn-adj { width:32px; height:32px; border-radius:50%; border:none; color:white; font-weight:bold; cursor:pointer; margin:0 6px; font-size:1rem; display:inline-flex; justify-content:center; align-items:center; }
+        .btn-plus { background:#00b894; box-shadow: 0 4px 8px rgba(0,184,148,0.3); }
+        .btn-minus { background:#d63031; box-shadow: 0 4px 8px rgba(214,48,49,0.3); }
     </style>
 </head>
 <body>
@@ -111,15 +129,15 @@
             <span style="font-size:0.9rem; margin-left:auto; color:var(--text-sub); font-weight:normal;">リセット: <span id="apiResetTimeDisplay">--:--</span></span>
         </h2>
         
-        <div style="display:flex; gap:10px; margin-bottom:20px;">
-            <div class="input-group" style="flex:1; background:#fff3e0; padding:10px; border-radius:12px; border:1px solid #ffeaa7; margin-bottom:0;">
-                <label style="margin-bottom:0; cursor:pointer; font-size:0.9rem;">
+        <div style="display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap;">
+            <div class="input-group" style="flex:1; background:#fff3e0; padding:12px; border-radius:16px; border:1px solid #ffeaa7; margin-bottom:0; min-width:200px;">
+                <label style="margin-bottom:0; cursor:pointer; font-size:0.95rem;">
                     <input type="checkbox" id="demoModeCheck" style="width:18px; height:18px; vertical-align:middle;">
                     <span style="vertical-align:middle; color:#d35400;">🧪 <b>デモモード</b> (APIキー不要)</span>
                 </label>
             </div>
-            <div class="input-group" style="flex:1; background:#e3f2fd; padding:10px; border-radius:12px; border:1px solid #bbdefb; margin-bottom:0;">
-                <label style="margin-bottom:0; cursor:pointer; font-size:0.9rem;">
+            <div class="input-group" style="flex:1; background:#e3f2fd; padding:12px; border-radius:16px; border:1px solid #bbdefb; margin-bottom:0; min-width:200px;">
+                <label style="margin-bottom:0; cursor:pointer; font-size:0.95rem;">
                     <input type="checkbox" id="manualSubCheck" checked style="width:18px; height:18px; vertical-align:middle;">
                     <span style="vertical-align:middle; color:#0d47a1;">👤 <b>登録者数 手動モード</b> (推奨)</span>
                 </label>
@@ -184,15 +202,15 @@
             <div class="stat-box">
                 <span class="stat-num" id="dispSubsVal">0</span>
                 <span class="stat-sub" id="dispSubsInc">(+0)</span>
-                <div id="subManualControls" style="margin-top:5px; display:none;">
-                    <button class="btn-adj btn-minus" onclick="adjustSub(-1)">-1</button>
-                    <button class="btn-adj btn-plus" onclick="adjustSub(1)">+1</button>
+                <div id="subManualControls" style="margin-top:10px; display:none;">
+                    <button class="btn-adj btn-minus" onclick="adjustSub(-1)">-</button>
+                    <button class="btn-adj btn-plus" onclick="adjustSub(1)">+</button>
                 </div>
                 <span class="stat-label">👤 登録者数</span>
             </div>
             <div class="stat-box">
                 <span class="stat-num" id="dispFirst">0</span>
-                <button class="btn-manual" onclick="addFirstComment()">+1 カウント</button>
+                <button class="btn-manual" onclick="addFirstComment()">+1</button>
                 <span class="stat-label">🎉 初コメ (手動)</span>
             </div>
             <div class="stat-box">
@@ -230,12 +248,11 @@
 <div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;">閉じる</button></div></div>
 
 <script>
-    const SAFE_QUOTA_LIMIT = 9000, HISTORY_KEY = "yt_endurance_v14", NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
+    const SAFE_QUOTA_LIMIT = 9000, HISTORY_KEY = "yt_endurance_v16", NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
     let isTracking = false, lowViewerSeconds = 0, lastStatsTime = 0, nextApiPollingMs = 0, lastCommentReceivedTime = 0;
     let sessionData = { startTime: null, startSubCount: 0, currentSubCount: 0, totalComments: 0, manualFirstComments: 0, currentViewers: 0 };
     let videoId = "", channelId = "", liveChatId = null, nextPageToken = null;
-    let isDemo = false; 
-    let isManualSub = true; // 登録者手動モード
+    let isDemo = false, isManualSub = true;
 
     window.onload = function() { renderHistory(); checkDstAndDisplayResetTime(); calculateSafeIntervals(); updateSessionInfo(); };
 
@@ -273,8 +290,7 @@
     
     function calculateSafeIntervals() {
         const h = parseFloat(document.getElementById('targetHours').value)||1;
-        const total = (h+4)*3600; 
-        const statsCost = (total/50)*2;
+        const total = (h+4)*3600; const statsCost = (total/50)*2;
         let rem = SAFE_QUOTA_LIMIT - statsCost; if(rem<1000)rem=1000;
         let sec = total/rem; if(sec<5)sec=5;
         document.getElementById('chatIntervalDisplay').value = `最短 約${sec.toFixed(1)} 秒`;
@@ -290,8 +306,6 @@
         try {
             await initSession(); isTracking = true;
             document.body.classList.add('tracking');
-            
-            // 手動モードならボタン表示
             if(isManualSub) document.getElementById('subManualControls').style.display = 'block';
             else document.getElementById('subManualControls').style.display = 'none';
 
@@ -315,14 +329,10 @@
         liveChatId = v.liveStreamingDetails.activeLiveChatId; channelId = v.snippet.channelId;
         const c = await fetchChannelDetails(channelId, k);
         
-        // ★初期登録者数の設定（手動補正用）
         let initialSub = parseInt(c.statistics.subscriberCount);
         if(isManualSub) {
-            // APIの値が丸められている可能性が高いので、ユーザーに正確な値を入力させる
             let input = prompt(`現在APIが取得した登録者数は「${initialSub}」です。\n正確な開始時の登録者数を入力してください:`, initialSub);
-            if(input !== null && !isNaN(parseInt(input))) {
-                initialSub = parseInt(input);
-            }
+            if(input !== null && !isNaN(parseInt(input))) { initialSub = parseInt(input); }
         }
 
         sessionData = { startTime: new Date(), startSubCount: initialSub, currentSubCount: initialSub, totalComments: 0, manualFirstComments: 0, currentViewers: parseInt(v.liveStreamingDetails.concurrentViewers||0) };
@@ -335,35 +345,22 @@
         const minMs = parseFloat(document.getElementById('minIntervalSeconds').value)*1000;
         
         try {
-            if(isDemo) {
-                await demoSimulate();
-            } else {
+            if(isDemo) { await demoSimulate(); } else {
                 await fetchComments(k);
                 if (Date.now()-lastCommentReceivedTime >= NO_COMMENT_LIMIT_MS) { finishSession("コメント停止(30分)"); return; }
                 
                 if (now - lastStatsTime >= 50000) {
                     const v = await fetchVideoDetails(videoId, k); const c = await fetchChannelDetails(channelId, k);
                     sessionData.currentViewers = parseInt(v.liveStreamingDetails.concurrentViewers||0);
-                    
-                    // 手動モードでない場合のみAPIで登録者を更新
-                    if(!isManualSub) {
-                        sessionData.currentSubCount = parseInt(c.statistics.subscriberCount);
-                    }
+                    if(!isManualSub) { sessionData.currentSubCount = parseInt(c.statistics.subscriberCount); }
                     
                     const elapsedSec = (now - lastStatsTime) / 1000;
-                    lastStatsTime = Date.now(); 
-                    checkResetCondition(elapsedSec);
+                    lastStatsTime = Date.now(); checkResetCondition(elapsedSec);
                 }
             }
-            
             updateDisplay();
-            
-            let w = Math.max(minMs, nextApiPollingMs); 
-            if(w > 60000) w = 60000;
-            if(isDemo) w = 2000; 
-            
+            let w = Math.max(minMs, nextApiPollingMs); if(w > 60000) w = 60000; if(isDemo) w = 2000; 
             setTimeout(runMainLoop, w);
-
         } catch (e) { console.error(e); setTimeout(runMainLoop, 10000); }
     }
 
@@ -372,17 +369,11 @@
         if(add > 0) { sessionData.totalComments += add; lastCommentReceivedTime = Date.now(); }
         sessionData.currentViewers += Math.floor(Math.random() * 5) - 2; 
         if(sessionData.currentViewers < 0) sessionData.currentViewers = 0;
-        // 手動モードOFFなら勝手に増やす
         if(!isManualSub && Math.random() > 0.8) sessionData.currentSubCount += 1;
         checkResetCondition(2); 
     }
 
-    // 登録者数手動調整
-    function adjustSub(amount) {
-        if(!isTracking) return;
-        sessionData.currentSubCount += amount;
-        updateDisplay();
-    }
+    function adjustSub(amount) { if(!isTracking) return; sessionData.currentSubCount += amount; updateDisplay(); }
 
     function checkResetCondition(sec) {
         const th = parseInt(document.getElementById('resetViewerThreshold').value);
@@ -401,7 +392,7 @@
 
     function finishSession(reason) {
         isTracking = false; document.body.classList.remove('tracking');
-        document.getElementById('subManualControls').style.display = 'none'; // ボタン隠す
+        document.getElementById('subManualControls').style.display = 'none';
         const pt = calculatePoints();
         const rec = { id: Date.now(), points: pt, startTime: sessionData.startTime.toLocaleString(), endTime: new Date().toLocaleString(), subDiff: Math.max(0, sessionData.currentSubCount - sessionData.startSubCount), firstComments: sessionData.manualFirstComments, totalComments: sessionData.totalComments, reason: reason };
         saveToHistory(rec); setStatus(`終了！結果: ${pt} pt`, "");
