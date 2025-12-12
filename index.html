@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (v21 Volume)</title>
+    <title>耐久カウンター Jewel Ocean (v21 Revived 24h-Mode)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
     
     <style>
-        /* --- 基本デザイン (v16ベース) --- */
+        /* --- 基本デザイン --- */
         :root {
             --bg-grad-1: #a18cd1; --bg-grad-2: #fbc2eb;
             --glass-bg: rgba(255, 255, 255, 0.85); --glass-border: rgba(255, 255, 255, 0.6);
@@ -106,7 +106,6 @@
         .btn-plus { background:#00b894; box-shadow: 0 4px 8px rgba(0,184,148,0.3); }
         .btn-minus { background:#d63031; box-shadow: 0 4px 8px rgba(214,48,49,0.3); }
         
-        /* ■ 追加：音量設定UI ■ */
         .sound-setting { 
             display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; 
             gap: 15px; margin-top: 15px; padding-top:15px; border-top: 1px dashed #ccc;
@@ -114,8 +113,7 @@
         .volume-control { display: flex; align-items: center; gap: 8px; }
         .btn-test { background: #b2bec3; padding: 6px 12px; font-size: 0.85rem; border-radius: 20px; color: white; border: none; cursor: pointer; }
         .btn-test:hover { background: #636e72; }
-        /* スライダーの見た目 */
-        input[type=range] { width: 100px; cursor: pointer; }
+        input[type=range] { width: 300px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -156,7 +154,7 @@
             <div>
                 <div class="input-group">
                     <label>⏱️ 目標時間 (時間)</label>
-                    <input type="number" id="targetHours" value="6" min="1" oninput="calculateSafeIntervals()">
+                    <input type="number" id="targetHours" value="24" min="1" oninput="calculateSafeIntervals()">
                 </div>
                 <div class="input-group">
                     <label>🤖 更新頻度 (自動計算)</label>
@@ -203,7 +201,8 @@
             
             <div class="volume-control">
                 <span style="font-size:0.85rem; color:var(--text-sub);">音量</span>
-                <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="0.5">
+                <input type="range" id="volumeSlider" min="0" max="1.5" step="0.05" value="0.5">
+                <span id="volValue" style="font-size:0.9rem; font-weight:bold; color:var(--accent-color); width: 45px;">50%</span>
             </div>
             <button class="btn-test" onclick="playVolumeTest()">🔊 テスト</button>
         </div>
@@ -236,6 +235,7 @@
             <div class="stat-box">
                 <span class="stat-num" id="dispComm">0</span>
                 <span class="stat-label">💬 総コメント</span>
+                <div style="font-size:0.75rem; color:#b2bec3; margin-top:4px;">(更新: <span id="lastCommTime">--:--:--</span>)</div>
             </div>
             <div class="stat-box">
                 <span class="stat-num" id="dispViewers">-</span>
@@ -268,7 +268,7 @@
 <div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;">閉じる</button></div></div>
 
 <script>
-    const SAFE_QUOTA_LIMIT = 9000, HISTORY_KEY = "yt_endurance_v21", NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
+    const SAFE_QUOTA_LIMIT = 7500, HISTORY_KEY = "yt_endurance_v21", NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
     
     let isTracking = false;
     let uiTimerId = null; 
@@ -278,12 +278,14 @@
     let resetDeadline = null; 
     let nextBeepTime = 0; 
     let hasWarned1Min = false; 
+    let hasWarned30Sec = false;
 
     let sessionData = { startTime: null, startSubCount: 0, currentSubCount: 0, totalComments: 0, manualFirstComments: 0, currentViewers: 0 };
     let videoId = "", channelId = "", liveChatId = null, nextPageToken = null;
     let isDemo = false, isManualSub = true;
+    
     let audioCtx = null;
-    let globalVolume = 0.5; // デフォルト音量
+    let globalVolume = 0.5;
 
     window.onload = function() { renderHistory(); checkDstAndDisplayResetTime(); calculateSafeIntervals(); updateSessionInfo(); };
 
@@ -293,9 +295,12 @@
         if(audioCtx.state === 'suspended') audioCtx.resume();
     }
 
-    // 音量スライダーの監視
-    document.getElementById('volumeSlider').addEventListener('input', (e) => {
+    const volSlider = document.getElementById('volumeSlider');
+    const volDisplay = document.getElementById('volValue');
+
+    volSlider.addEventListener('input', (e) => {
         globalVolume = parseFloat(e.target.value);
+        volDisplay.innerText = Math.round(globalVolume * 100) + "%";
     });
 
     function playVolumeTest() {
@@ -308,7 +313,7 @@
         if (!document.getElementById('soundEnabled').checked) return;
         const msg = new SpeechSynthesisUtterance(text);
         msg.lang = "ja-JP";
-        msg.volume = globalVolume; // 音量適用
+        msg.volume = Math.min(globalVolume, 1.0);
         msg.rate = 1.1; 
         window.speechSynthesis.speak(msg);
     }
@@ -325,8 +330,8 @@
         osc.frequency.setValueAtTime(0, now + 0.1);
         osc.frequency.setValueAtTime(880, now + 0.15); 
         
-        // 音量適用 (ビープ音は大きいので少し控えめにスケーリング)
-        const beepVol = globalVolume * 0.2; 
+        const beepVol = globalVolume * 0.1; 
+        
         gain.gain.setValueAtTime(beepVol, now);
         gain.gain.linearRampToValueAtTime(0, now + 0.3);
         
@@ -348,6 +353,7 @@
         if(type==='active') bar.classList.add('status-ok');
         if(type==='warning') bar.classList.add('status-warn');
         if(type==='demo') bar.classList.add('status-demo');
+        if(type==='grace') bar.classList.add('status-grace');
     }
 
     async function previewVideo() {
@@ -370,12 +376,61 @@
     }
     
     function calculateSafeIntervals() {
-        const h = parseFloat(document.getElementById('targetHours').value)||1;
-        const total = (h+4)*3600; const statsCost = (total/50)*2;
-        let rem = SAFE_QUOTA_LIMIT - statsCost; if(rem<1000)rem=1000;
-        let sec = total/rem; if(sec<5)sec=5;
-        document.getElementById('chatIntervalDisplay').value = `最短 約${sec.toFixed(1)} 秒`;
-        document.getElementById('minIntervalSeconds').value = sec;
+        let h = parseFloat(document.getElementById('targetHours').value);
+        if(!h || h <= 0) h = 24;
+
+        // 【ここが24hモードのロジック】
+        // 19時間以上の場合、API節約モード（へそくり2500確保）に切り替える
+        const isLongMode = h >= 19;
+        
+        const intervalInput = document.getElementById('chatIntervalDisplay');
+        const minIntervalInput = document.getElementById('minIntervalSeconds');
+        let sec;
+
+        if (isLongMode) {
+            // 24hモード計算式:
+            // 全体Quota(10000) - 緊急用(2500) - 統計コスト(1時間あたり約60pt換算)
+            const statsCostApprox = h * 60; 
+            const emergencyReserve = 2500;
+            const dailyLimit = 10000;
+            
+            const availableForComments = dailyLimit - emergencyReserve - statsCostApprox;
+            // 安全のため最低でも1000ptは残っていると仮定（マイナスにならないよう）
+            const safeCommentQuota = Math.max(availableForComments, 1000);
+            
+            const maxCommentCalls = safeCommentQuota / 5; // 1回5pt
+            const totalSeconds = h * 3600;
+            
+            sec = totalSeconds / maxCommentCalls;
+
+            // UIを赤文字にしてモード通知
+            intervalInput.style.color = "#d63031"; 
+            intervalInput.style.fontWeight = "bold";
+            intervalInput.value = `🐢 24hモード: 約${sec.toFixed(1)} 秒`;
+
+            // まだ計測中でなければステータスバーにも出す
+            if(!isTracking) {
+                setStatus("🐢 24h耐久モード待機中 (API節約ON)", "grace");
+            }
+        } else {
+            // 通常モード（従来の計算式）
+            const totalSec = (h + 4) * 3600; 
+            const statsCost = (totalSec / 50) * 2; 
+            let rem = SAFE_QUOTA_LIMIT - statsCost; 
+            if(rem < 1000) rem = 1000; 
+            sec = totalSec / rem; 
+
+            intervalInput.style.color = "#636e72";
+            intervalInput.style.fontWeight = "normal";
+            intervalInput.value = `通常モード: 約${sec.toFixed(1)} 秒`;
+            
+            if(!isTracking) {
+                setStatus("👋 準備OK！設定を入力してね", "");
+            }
+        }
+        
+        if(sec < 5) sec = 5;
+        minIntervalInput.value = sec;
     }
 
     // --- メイン処理 ---
@@ -402,6 +457,7 @@
             resetDeadline = null; 
             nextBeepTime = 0; 
             hasWarned1Min = false;
+            hasWarned30Sec = false;
 
             updateSessionInfo(); 
             runApiLoop();
@@ -437,21 +493,59 @@
         if (!isTracking) return;
         const k = document.getElementById('apiKey').value; const now = Date.now();
         const minMs = parseFloat(document.getElementById('minIntervalSeconds').value)*1000;
+        
+        // 残り20秒を切っているかチェック
+        let isEmergency = false;
+        if(resetDeadline) {
+            const remaining = resetDeadline - now;
+            if(remaining > 0 && remaining < 20000) {
+                isEmergency = true;
+            }
+        }
+
         try {
             if(isDemo) { await demoSimulate(); } else {
-                await fetchComments(k);
+                
+                // 緊急時（残り20秒未満）はコメント取得をスキップして、同接確認に専念させる
+                if(!isEmergency) {
+                    await fetchComments(k);
+                } else {
+                    console.log("緊急モード: コメント取得を一時停止中...");
+                }
+
                 if (Date.now()-lastCommentReceivedTime >= NO_COMMENT_LIMIT_MS) { finishSession("コメント停止(30分)"); return; }
-                if (now - lastStatsTime >= 50000) {
-                    const v = await fetchVideoDetails(videoId, k); const c = await fetchChannelDetails(channelId, k);
-                    sessionData.currentViewers = parseInt(v.liveStreamingDetails.concurrentViewers||0);
-                    if(!isManualSub) { sessionData.currentSubCount = parseInt(c.statistics.subscriberCount); }
-                    lastStatsTime = Date.now();
+                
+                // 通常の統計更新 (約50秒に1回)
+                if (now - lastStatsTime >= 50000 && !isEmergency) {
+                    await updateStatsSingle(); 
                 }
             }
+            
             let w = Math.max(minMs, nextApiPollingMs); 
             if(w > 60000) w = 60000; if(isDemo) w = 2000; 
+            
             setTimeout(runApiLoop, w);
+
         } catch (e) { console.error(e); setTimeout(runApiLoop, 10000); }
+    }
+
+    // 緊急用：同接数だけを更新 (1pt消費)
+    async function updateStatsSingle() {
+        if(!isTracking) return;
+        try {
+            const k = document.getElementById('apiKey').value;
+            const v = await fetchVideoDetails(videoId, k);
+            const viewers = parseInt(v.liveStreamingDetails.concurrentViewers||0);
+            sessionData.currentViewers = viewers;
+            
+            if(!isManualSub && Math.random() > 0.9) {
+                const c = await fetchChannelDetails(channelId, k);
+                sessionData.currentSubCount = parseInt(c.statistics.subscriberCount);
+            }
+
+            lastStatsTime = Date.now();
+            updateDisplay();
+        } catch(e) { console.error("Stats update failed:", e); }
     }
 
     function startUiLoop() {
@@ -465,28 +559,59 @@
             if (sessionData.currentViewers <= th) {
                 if (!resetDeadline) {
                     resetDeadline = Date.now() + (durMinutes * 60 * 1000);
-                    speakText("接続人数が目標を下回りました"); 
+                    speakText("接続人数が目標値を下回りました"); 
                     nextBeepTime = Date.now() + 60000;
                     hasWarned1Min = false;
+                    hasWarned30Sec = false;
                 }
+                
                 if (Date.now() >= nextBeepTime) {
                     playBeepSound();
                     nextBeepTime = Date.now() + 60000; 
                 }
+
                 const remainingMs = resetDeadline - Date.now();
                 const remainingSec = Math.ceil(remainingMs / 1000);
                 
+                // 直前回避チェック (悪あがき)
+                if ([30, 10, 5, 1].includes(remainingSec) && !isDemo) {
+                      setStatus(`⚠️ 緊急確認中... (あと${remainingSec}秒)`, "warning");
+                      updateStatsSingle();
+                }
+
                 if (remainingSec <= 60 && remainingSec > 0 && !hasWarned1Min) {
-                    speakText("残り1分です"); 
+                    speakText("のこり1分です"); 
                     hasWarned1Min = true;
                 }
+                
+                if (remainingSec <= 30 && remainingSec > 0 && !hasWarned30Sec) {
+                    speakText("30秒前。粘って！"); 
+                    hasWarned30Sec = true;
+                }
+
                 if (remainingSec <= 0) {
                     finishSession("同接低下リセット");
                 } else {
                     document.getElementById('resetTimer').innerText = remainingSec;
-                    setStatus(`⚠️ 同接${th}人以下！あと${remainingSec}秒`, "warning");
+                    const currentStatus = document.getElementById('statusBox').innerText;
+                    if(!currentStatus.includes("緊急")) {
+                        // 20秒切ったらメッセージを変える
+                        if(remainingSec < 20) {
+                             setStatus(`⚠️ 集計一時停止中...生存優先！あと${remainingSec}秒`, "warning");
+                        } else {
+                             setStatus(`⚠️ 同接${th}人以下！あと${remainingSec}秒`, "warning");
+                        }
+                    }
                 }
             } else {
+                // ■ 復活時のボイス
+                if (resetDeadline) {
+                    speakText("接続人数が目標を上回りました。すごいよ。よく頑張った。えらい");
+                    // 警告フラグもリセット
+                    hasWarned1Min = false;
+                    hasWarned30Sec = false;
+                }
+
                 resetDeadline = null; 
                 document.getElementById('resetTimer').innerText = "--";
                 if(!isDemo) setStatus("🚀 計測中！順調です", "active");
@@ -497,6 +622,14 @@
     async function demoSimulate() {
         const add = Math.floor(Math.random() * 4);
         if(add > 0) { sessionData.totalComments += add; lastCommentReceivedTime = Date.now(); }
+        // デモモード：もし深夜帯なら24時間表記（25:00等）にする
+        let d = new Date();
+        let h = d.getHours();
+        let m = d.getMinutes().toString().padStart(2, '0');
+        // 朝6時未満(0,1,2,3,4,5)なら +24して表示
+        let dispH = (h < 6) ? h + 24 : h;
+        document.getElementById('lastCommTime').innerText = `${dispH}:${m}`;
+        
         sessionData.currentViewers += Math.floor(Math.random() * 5) - 2; 
         if(sessionData.currentViewers < 0) sessionData.currentViewers = 0;
         if(!isManualSub && Math.random() > 0.8) sessionData.currentSubCount += 1;
@@ -504,18 +637,37 @@
 
     function adjustSub(amount) { if(!isTracking) return; sessionData.currentSubCount += amount; updateDisplay(); }
 
-    function finishSession(reason) {
+    async function finishSession(reason) {
+        if(!isTracking) return; 
+        
         isTracking = false; 
         if(uiTimerId) clearInterval(uiTimerId); 
         document.body.classList.remove('tracking');
         document.getElementById('subManualControls').style.display = 'none';
         
+        setStatus("📊 最終集計中... (コメント・登録者確認)", "warning");
+        
+        if(!isDemo) {
+            try {
+                const k = document.getElementById('apiKey').value;
+                await fetchComments(k);
+                if(!isManualSub) {
+                    const c = await fetchChannelDetails(channelId, k);
+                    sessionData.currentSubCount = parseInt(c.statistics.subscriberCount);
+                }
+            } catch(e) { console.error("最終集計エラー:", e); }
+        }
+
         const pt = calculatePoints();
         const rec = { id: Date.now(), points: pt, startTime: sessionData.startTime.toLocaleString(), endTime: new Date().toLocaleString(), subDiff: Math.max(0, sessionData.currentSubCount - sessionData.startSubCount), firstComments: sessionData.manualFirstComments, totalComments: sessionData.totalComments, reason: reason };
         saveToHistory(rec); setStatus(`終了！結果: ${pt} pt`, "");
         
-        if(reason === "同接低下リセット") { speakText("接続人数が目標を下回ったため、停止しました。おつかれい！！"); } 
-        else { speakText("計測を終了しました。おつかれい！！"); }
+        if(reason === "同接低下リセット") { 
+            speakText("接続人数が目標を下回ったため、停止しました。おつかれさまでございました！！"); 
+        } 
+        else { 
+            speakText("計測を終了しました。おつかれい！！"); 
+        }
         
         alert(`おつかれさま！\n理由: ${reason}\n結果: ${pt} pt`); updateSessionInfo();
     }
@@ -538,6 +690,14 @@
         let url = `https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId=${liveChatId}&part=id&key=${key}&maxResults=2000`;
         if (nextPageToken) url += `&pageToken=${nextPageToken}`;
         const res = await fetch(url); const data = await res.json();
+        
+        // 24時間表記対応（深夜0〜5時を24〜29時と表示）
+        let d = new Date();
+        let h = d.getHours();
+        let m = d.getMinutes().toString().padStart(2, '0');
+        let dispH = (h < 6) ? h + 24 : h;
+        document.getElementById('lastCommTime').innerText = `${dispH}:${m}`;
+        
         if (data.items && data.items.length > 0) { sessionData.totalComments += data.items.length; lastCommentReceivedTime = Date.now(); }
         if (data.nextPageToken) nextPageToken = data.nextPageToken; if (data.pollingIntervalMillis) nextApiPollingMs = data.pollingIntervalMillis;
     }
