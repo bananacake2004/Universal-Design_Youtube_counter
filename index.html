@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (全回収ver)</title>
+    <title>耐久カウンター Jewel Ocean (v13)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -213,7 +213,7 @@
 <div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;">閉じる</button></div></div>
 
 <script>
-    const SAFE_QUOTA_LIMIT = 9000, HISTORY_KEY = "yt_endurance_v12", NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
+    const SAFE_QUOTA_LIMIT = 9000, HISTORY_KEY = "yt_endurance_v13", NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
     let isTracking = false, lowViewerSeconds = 0, lastStatsTime = 0, nextApiPollingMs = 0, lastCommentReceivedTime = 0;
     let sessionData = { startTime: null, startSubCount: 0, currentSubCount: 0, totalComments: 0, manualFirstComments: 0, currentViewers: 0 };
     let videoId = "", channelId = "", liveChatId = null, nextPageToken = null;
@@ -252,10 +252,13 @@
         const n = new Date(); const s = (n.getMonth()>2 && n.getMonth()<10); 
         document.getElementById('apiResetTimeDisplay').innerText = s ? "16:00" : "17:00";
     }
+    
+    // ■ 修正ポイント：更新頻度の計算で、同接チェック分(50秒)を考慮
     function calculateSafeIntervals() {
         const h = parseFloat(document.getElementById('targetHours').value)||1;
-        const total = (h+4)*3600; const cost = (total/60)*2;
-        let rem = SAFE_QUOTA_LIMIT - cost; if(rem<1000)rem=1000;
+        const total = (h+4)*3600; 
+        const statsCost = (total/50)*2; // 50秒に1回と仮定
+        let rem = SAFE_QUOTA_LIMIT - statsCost; if(rem<1000)rem=1000;
         let sec = total/rem; if(sec<5)sec=5;
         document.getElementById('chatIntervalDisplay').value = `最短 約${sec.toFixed(1)} 秒`;
         document.getElementById('minIntervalSeconds').value = sec;
@@ -301,17 +304,26 @@
             } else {
                 await fetchComments(k);
                 if (Date.now()-lastCommentReceivedTime >= NO_COMMENT_LIMIT_MS) { finishSession("コメント停止(30分)"); return; }
-                if (now - lastStatsTime >= 60000) {
+                
+                // ■ 修正ポイント：50秒 (50000ms) 以上経過していたら更新
+                if (now - lastStatsTime >= 50000) {
                     const v = await fetchVideoDetails(videoId, k); const c = await fetchChannelDetails(channelId, k);
                     sessionData.currentViewers = parseInt(v.liveStreamingDetails.concurrentViewers||0);
                     sessionData.currentSubCount = parseInt(c.statistics.subscriberCount);
-                    lastStatsTime = Date.now(); checkResetCondition(60);
+                    
+                    const elapsedSec = (now - lastStatsTime) / 1000;
+                    lastStatsTime = Date.now(); 
+                    checkResetCondition(elapsedSec);
                 }
             }
             
             updateDisplay();
-            let w = Math.max(minMs, nextApiPollingMs); if(w>60000)w=60000;
+            
+            let w = Math.max(minMs, nextApiPollingMs); 
+            // ■ 修正ポイント：上限を60秒にキャップ
+            if(w > 60000) w = 60000;
             if(isDemo) w = 2000; 
+            
             setTimeout(runMainLoop, w);
 
         } catch (e) { console.error(e); setTimeout(runMainLoop, 10000); }
@@ -332,7 +344,8 @@
         if (sessionData.currentViewers <= th) {
             lowViewerSeconds += sec;
             const rem = dur - lowViewerSeconds;
-            document.getElementById('resetTimer').innerText = rem > 0 ? rem.toFixed(0) : 0;
+            // 整数表示
+            document.getElementById('resetTimer').innerText = rem > 0 ? Math.floor(rem) : 0;
             setStatus(`⚠️ 同接${th}人以下が続いてるよ`, "warning");
             if (lowViewerSeconds >= dur) finishSession("同接低下リセット");
         } else {
@@ -363,8 +376,6 @@
         const res = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${cid}&key=${key}`);
         const data = await res.json(); return data.items[0];
     }
-    
-    // ■ 修正ポイント：maxResults=2000 を追加して取りこぼしを防ぐ
     async function fetchComments(key) {
         let url = `https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId=${liveChatId}&part=id&key=${key}&maxResults=2000`;
         if (nextPageToken) url += `&pageToken=${nextPageToken}`;
