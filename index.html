@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (Multi-Key Edition)</title>
+    <title>耐久カウンター Jewel Ocean (Final)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -41,7 +41,7 @@
         .input-group label { display: block; font-weight: 700; font-size: 1.05rem; margin-bottom: 8px; color: var(--text-main); }
         .input-group input { width: 100%; padding: 16px; font-size: 1.1rem; border: 2px solid #dfe6e9; border-radius: 16px; background: rgba(255,255,255,0.9); transition: 0.3s; font-family: inherit; box-sizing: border-box; }
         .input-group input:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.2); }
-        /* テキストエリア用スタイル追加 */
+        /* 複数キー入力用 */
         .input-group textarea { width: 100%; padding: 16px; font-size: 0.95rem; border: 2px solid #dfe6e9; border-radius: 16px; background: rgba(255,255,255,0.9); font-family: "Roboot Mono", monospace; box-sizing: border-box; height: 100px; resize: vertical; line-height: 1.4; }
         .input-group textarea:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.2); }
 
@@ -81,11 +81,11 @@
         .obs-toggle { text-align: right; margin-bottom: 10px; }
         .btn-obs { background: rgba(255,255,255,0.5); padding: 8px 16px; border-radius: 30px; color: var(--text-main); font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px; z-index: 9999; }
         
-        /* OBSモード時のスタイル調整 */
+        /* OBSモード時のスタイル調整（復帰ボタン対応） */
         body.obs-mode { background: transparent; padding: 0; }
         body.obs-mode .bubbles, body.obs-mode .setting-wrap, body.obs-mode .history-wrap, body.obs-mode .status-bar { display: none; }
         
-        /* 修正: OBSモードでもボタンを右上に残す */
+        /* OBSモードでもボタンを右上に残す */
         body.obs-mode .obs-toggle { 
             position: fixed; top: 10px; right: 10px; 
             opacity: 0.2; /* 普段は薄く */
@@ -383,12 +383,22 @@
         if(type==='grace') bar.classList.add('status-grace');
     }
 
-    // APIキーの取得とパース
+    // APIキーの取得と重複除去
     function getApiKeys() {
         const raw = document.getElementById('apiKey').value;
-        // 改行、カンマ、空白で分割して空文字を除去
-        const keys = raw.split(/[\n,\s]+/).filter(k => k.trim().length > 0);
-        return keys;
+        if (!raw) return [];
+        
+        let keys = raw.split(/[\n,\s]+/).filter(k => k.trim().length > 0);
+        
+        // 重複削除 (Setを使用)
+        const uniqueKeys = [...new Set(keys)];
+        
+        // 入力欄にフィードバック（見た目だけ）はしないが、重複があったらコンソール通知
+        if (keys.length !== uniqueKeys.length) {
+            console.warn("重複したAPIキーが含まれていたため、自動で1つにまとめました。");
+        }
+        
+        return uniqueKeys;
     }
 
     // 次のAPIキーを取得（ラウンドロビン）
@@ -453,11 +463,14 @@
         const todayPT = getPTDateString();
         let record = JSON.parse(localStorage.getItem(QUOTA_KEY) || "{}");
         
-        const keys = getApiKeys();
-        const totalLimit = keys.length * QUOTA_PER_KEY;
+        // 有効キー数 x 10000 を上限とする
+        // ※実行前は textarea から取得、実行中は global 変数 apiKeys から取得
+        let keys = isTracking ? apiKeys : getApiKeys();
+        if(keys.length === 0 && !isTracking) keys = getApiKeys(); // 初期状態
+        
+        const totalLimit = (keys.length > 0 ? keys.length : 1) * QUOTA_PER_KEY;
 
         if (record.date !== todayPT) return true; 
-        // 複数キー合計のリミットでチェック
         if (record.count >= totalLimit) return false;
         return true;
     }
@@ -468,7 +481,7 @@
         if (record.date !== todayPT) { record = { date: todayPT, count: 0 }; }
         
         const current = record.count;
-        const keys = getApiKeys();
+        let keys = getApiKeys(); // 表示用は常に今の入力状態を見る
         const totalLimit = (keys.length > 0 ? keys.length : 1) * QUOTA_PER_KEY;
         
         document.getElementById('apiQuotaDisplay').innerText = `${current} / ${totalLimit}`;
@@ -482,12 +495,11 @@
         else bar.style.background = "#00b894"; 
     }
 
-    // --- マルチキー対応版 自動計算ロジック ---
+    // --- マルチキー対応 Logic Z 計算ロジック ---
     function calculateSafeIntervals() {
         let h = parseFloat(document.getElementById('targetHours').value);
         if(!h || h <= 0) h = 24;
         
-        // キー数を取得
         const keys = getApiKeys();
         const keyCount = keys.length > 0 ? keys.length : 1;
         
@@ -500,10 +512,9 @@
         
         const endTarget = new Date(now.getTime() + h * 60 * 60 * 1000);
         
-        let x = 0;
-        let y = 0;
-        
+        let x = 0; let y = 0;
         const msUntilReset = resetTime - now;
+        
         if (msUntilReset > 0) {
             x = Math.min(h, msUntilReset / (1000 * 60 * 60));
         }
@@ -531,7 +542,6 @@
         // 間隔計算 (1回5pt消費)
         let intervalSec = 3600 / (ptsPerHour / 5);
 
-        // キーが多ければ爆速にする
         // 安全マージン（5秒以下にはしない）
         if(intervalSec < 5) intervalSec = 5;
 
@@ -547,8 +557,6 @@
         else intervalInput.style.color = "#00b894"; 
 
         minIntervalInput.value = intervalSec;
-        
-        // Quota表示も更新
         displayApiQuota();
     }
 
@@ -556,12 +564,15 @@
     async function startTracking() {
         if (isTracking) return;
         
+        // 実行開始時にキーを確定
         apiKeys = getApiKeys();
+        
         if(!document.getElementById('demoModeCheck').checked && apiKeys.length === 0) {
             alert("APIキーを入力してください");
             return;
         }
 
+        // 開始時点でリミットチェック
         if (!checkQuotaSafe()) {
             alert("本日のAPI使用上限に達しているため開始できません。\n(キーを追加するか、太平洋時間 0時 までお待ちください)");
             return;
@@ -629,6 +640,7 @@
     async function runApiLoop() {
         if (!isTracking) return;
         
+        // ループ中もリミットチェック
         if (!checkQuotaSafe()) {
             finishSession("API上限到達(自動停止)");
             return;
@@ -646,7 +658,6 @@
         try {
             if(isDemo) { await demoSimulate(); } else {
                 if(!isEmergency) {
-                    // APIキーをローテーションして使用
                     const key = getNextApiKey();
                     await fetchComments(key);
                 } else {
@@ -837,7 +848,7 @@
     }
 
     function extractVideoId(u){ const m=u.match(/^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/); return (m&&m[7].length==11)?m[7]:false; }
-    function validateInputs(){ if(!document.getElementById('apiKey').value||!document.getElementById('url').value){ alert("URLとAPIキーを入力してください"); return false; } return true; }
+    function validateInputs(){ if(!document.getElementById('apiKey').value && !document.getElementById('demoModeCheck').checked){ alert("APIキーを入力してください"); return false; } if(!document.getElementById('url').value && !document.getElementById('demoModeCheck').checked){ alert("URLを入力してください"); return false; } return true; }
 </script>
 </body>
 </html>
