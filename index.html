@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (Dynamic Logic)</title>
+    <title>耐久カウンター Jewel Ocean (Fix Ver.)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -329,8 +329,9 @@
             </div>
             <div class="stat-box">
                 <span class="stat-num" id="dispFirst">0</span>
+                <button class="btn-manual" onclick="manualHatsuAction()">+1</button>
                 <span class="stat-label">🎉 初コメ (回数)</span>
-                <div style="font-size:0.8rem; color:#aaa; margin-top:5px;">タイマークリックで+1</div>
+                <div style="font-size:0.8rem; color:#aaa; margin-top:5px;">(タイマー押下も可)</div>
             </div>
             <div class="stat-box">
                 <span class="stat-num" id="dispComm">0</span>
@@ -382,7 +383,7 @@
 <div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li><li>※複数アカウントで作成したキーを入力すると制限が緩和されます！</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;">閉じる</button></div></div>
 
 <script>
-    const HISTORY_KEY = "yt_endurance_v24", QUOTA_KEY = "yt_api_quota_pt_v1";
+    const HISTORY_KEY = "yt_endurance_v25", QUOTA_KEY = "yt_api_quota_pt_v1";
     const NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
     const QUOTA_PER_KEY = 10000;
     
@@ -925,7 +926,7 @@
         let d = new Date();
         let h = d.getHours();
         let m = d.getMinutes().toString().padStart(2, '0');
-        let dispH = (h < 6) ? h + 24 : h;
+        let dispH = h.toString().padStart(2, '0');
         document.getElementById('lastCommTime').innerText = `${dispH}:${m}`;
         sessionData.currentViewers += Math.floor(Math.random() * 5) - 2; 
         if(sessionData.currentViewers < 0) sessionData.currentViewers = 0;
@@ -990,7 +991,7 @@
         let d = new Date();
         let h = d.getHours();
         let m = d.getMinutes().toString().padStart(2, '0');
-        let dispH = (h < 6) ? h + 24 : h;
+        let dispH = h.toString().padStart(2, '0');
         document.getElementById('lastCommTime').innerText = `${dispH}:${m}`;
         if (data.items && data.items.length > 0) { sessionData.totalComments += data.items.length; lastCommentReceivedTime = Date.now(); }
         if (data.nextPageToken) nextPageToken = data.nextPageToken; if (data.pollingIntervalMillis) nextApiPollingMs = data.pollingIntervalMillis;
@@ -1017,4 +1018,4 @@
     }
 </script>
 </body>
-</html>
+                                                                        </html>
