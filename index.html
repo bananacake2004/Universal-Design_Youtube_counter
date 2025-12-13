@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (UD_1)</title>
+    <title>耐久カウンター Jewel Ocean (Dynamic Logic)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -264,11 +264,11 @@
             
             <div class="condition-row">
                 <label class="cond-label" style="color:#e84393;"><input type="checkbox" id="cond_no_first" checked> (4) 初コメ耐久タイマー</label>
-                <span>：2分タイマー (クリックでリセット)</span>
+                <span>：<input type="number" id="val_no_first_min" value="2" step="0.1" style="width:50px"> 分間、初コメがないと終了</span>
             </div>
             <div class="condition-row">
                 <label class="cond-label" style="color:#0984e3;"><input type="checkbox" id="cond_low_viewers" checked> (5) 同接維持タイマー</label>
-                <span>：5分タイマー (同接低下でカウント)</span>
+                <span>：同接 <input type="number" id="resetViewerThreshold" value="10" style="width:50px"> 人以下が <input type="number" id="resetDurationMinutes" value="5" step="0.1" style="width:50px"> 分続くと終了</span>
             </div>
             <div style="font-size:0.85rem; color:#636e72; margin-top:5px;">※どれか一つでも条件を満たすと終了します。タイマーは -10秒 で終了。</div>
         </div>
@@ -307,12 +307,12 @@
         <div class="timer-display-area" id="timerArea">
             <div id="timer-hatsu" class="timer-box" onclick="manualHatsuAction()">
                 <div class="timer-label">初コメ耐久 (Click Reset)</div>
-                <div class="timer-time" id="hatsu-time">02:00</div>
+                <div class="timer-time" id="hatsu-time">--:--</div>
                 <div class="timer-msg" id="hatsu-msg">コメント待ち...</div>
             </div>
             <div id="timer-dousetsu" class="timer-box">
                 <div class="timer-label">同接維持</div>
-                <div class="timer-time" id="dousetsu-time">05:00</div>
+                <div class="timer-time" id="dousetsu-time">--:--</div>
                 <div class="timer-msg" id="dousetsu-msg">維持してね！</div>
             </div>
         </div>
@@ -382,28 +382,23 @@
 <div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li><li>※複数アカウントで作成したキーを入力すると制限が緩和されます！</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;">閉じる</button></div></div>
 
 <script>
-    const HISTORY_KEY = "yt_endurance_v23", QUOTA_KEY = "yt_api_quota_pt_v1";
+    const HISTORY_KEY = "yt_endurance_v24", QUOTA_KEY = "yt_api_quota_pt_v1";
     const NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
     const QUOTA_PER_KEY = 10000;
-    
-    // --- Timer Constants (Seconds) ---
-    const HATSU_LIMIT = 2 * 60; // 2分
-    const DOUSETSU_LIMIT = 5 * 60; // 5分
-    const END_THRESHOLD = -10; // -10秒で終了
     
     let isTracking = false;
     let lastStatsTime = 0; 
     let nextApiPollingMs = 0; 
     let lastCommentReceivedTime = 0;
     
-    // Timer Variables
-    let timeHatsu = HATSU_LIMIT;
-    let timeDousetsu = DOUSETSU_LIMIT;
-    let lastTimerUpdate = 0; // for accurate delta time
+    // Timer Logic Variables (Not constant)
+    let lastManualFirstActionTime = 0; // 初コメアクション時刻
+    let dousetsuDropStartTime = null;  // 同接が閾値を下回った時刻
+    let lastDousetsuCheckSec = null;   // API緊急確認用
     
     let hasWarned30SecHatsu = false;
     let hasWarned30SecDousetsu = false;
-    let lastCommentCountWarn = null; // コメントカウントダウン用
+    let lastCommentCountWarn = null; 
     
     let sessionData = { startTime: null, startSubCount: 0, currentSubCount: 0, totalComments: 0, manualFirstComments: 0, currentViewers: 0 };
     let videoId = "", channelId = "", liveChatId = null, nextPageToken = null;
@@ -415,7 +410,6 @@
     let audioCtx = null;
     let globalVolume = 0.5;
 
-    // Smooth Display Variables
     let visualState = {
         totalPoints: 0,
         subCount: 0,
@@ -430,11 +424,10 @@
         calculateSafeIntervals(); 
         updateSessionInfo();
         displayApiQuota(); 
-        updateVisibility(); // 初期表示状態の更新
+        updateVisibility(); 
         requestAnimationFrame(updateVisualsLoop); 
     };
     
-    // 設定変更時に表示を切り替える
     document.getElementById('cond_no_first').addEventListener('change', updateVisibility);
     document.getElementById('cond_low_viewers').addEventListener('change', updateVisibility);
 
@@ -652,14 +645,12 @@
             else setStatus("🚀 計測開始！", "active");
             
             // リセット
-            timeHatsu = HATSU_LIMIT;
-            timeDousetsu = DOUSETSU_LIMIT;
-            lastTimerUpdate = Date.now();
+            lastManualFirstActionTime = Date.now();
+            dousetsuDropStartTime = null;
             hasWarned30SecHatsu = false;
             hasWarned30SecDousetsu = false;
             lastCommentCountWarn = null;
-            updateTimerUI('hatsu', timeHatsu);
-            updateTimerUI('dousetsu', timeDousetsu);
+            lastDousetsuCheckSec = null;
             
             lastStatsTime = Date.now(); 
             lastCommentReceivedTime = Date.now(); 
@@ -714,7 +705,7 @@
                 
                 if (Date.now()-lastCommentReceivedTime >= NO_COMMENT_LIMIT_MS) { finishSession("コメント停止(30分)"); return; }
                 
-                // Regular stats polling
+                // Regular stats polling (60s interval usually)
                 if (now - lastStatsTime >= 60000) { await updateStatsSingle(); }
             }
             let w = Math.max(minMs, nextApiPollingMs); 
@@ -740,10 +731,8 @@
         } catch(e) { console.error("Stats update failed:", e); }
     }
 
-    // --- High Performance Animation & Logic Loop ---
     function updateVisualsLoop() {
         if(isTracking) {
-            // 1. Smooth Interpolation
             const targetPoints = calculatePoints();
             visualState.totalPoints = lerp(visualState.totalPoints, targetPoints, 0.1);
             visualState.subCount = lerp(visualState.subCount, sessionData.currentSubCount, 0.1);
@@ -760,7 +749,6 @@
             document.getElementById('dispViewers').innerText = Math.round(visualState.viewers).toLocaleString();
             document.getElementById('totalPoints').innerText = Math.round(visualState.totalPoints).toLocaleString();
 
-            // 2. Timer & Condition Logic
             checkConditionsAndTimer();
         }
         requestAnimationFrame(updateVisualsLoop);
@@ -774,9 +762,6 @@
 
     function checkConditionsAndTimer() {
         const now = Date.now();
-        const deltaSec = (now - lastTimerUpdate) / 1000;
-        lastTimerUpdate = now;
-
         const useGoalViewers = document.getElementById('cond_goal_viewers').checked;
         const useGoalSubs = document.getElementById('cond_goal_subs').checked;
         const useLimitComments = document.getElementById('cond_limit_comments').checked;
@@ -790,7 +775,7 @@
         if(useGoalViewers) {
             const goalV = parseInt(document.getElementById('val_goal_viewers').value);
             const remaining = goalV - sessionData.currentViewers;
-            if (remaining <= 10) danger = true; // 残り10人
+            if (remaining <= 10) danger = true; 
             if (remaining <= 0) { finishSession(`🎉 同接ゴール達成 (${goalV}人)`); return; }
         }
 
@@ -798,22 +783,19 @@
         if(useGoalSubs) {
             const goalS = parseInt(document.getElementById('val_goal_subs').value);
             const remaining = goalS - sessionData.currentSubCount;
-            if (remaining <= 20) danger = true; // 残り20人
+            if (remaining <= 20) danger = true; 
             if (remaining <= 0) { finishSession(`🎉 登録者ゴール達成 (${goalS}人)`); return; }
         }
 
-        // (6) コメント上限 (追加)
+        // (6) コメント上限
         if(useLimitComments) {
             const limitC = parseInt(document.getElementById('val_limit_comments').value);
             const remaining = limitC - sessionData.totalComments;
             
             if (remaining <= 0) { finishSession(`🎉 コメント数上限達成 (${limitC}件)`); return; }
-            
-            // 読み上げロジック (残り100件以下で10件刻み)
             if (remaining <= 100) {
                 const tenDigit = Math.floor(remaining / 10);
                 if (lastCommentCountWarn !== tenDigit) {
-                     // 10件刻みで変化した時だけ読む
                      speakText(`あと、${remaining}件です`);
                      lastCommentCountWarn = tenDigit;
                 }
@@ -821,47 +803,64 @@
             if (remaining <= 20) danger = true;
         }
 
-        // (4) 初コメ耐久タイマー
+        // (4) 初コメ耐久タイマー (Input Variable Logic)
         if (useHatsu) {
-            timeHatsu -= deltaSec;
-            updateTimerUI('hatsu', timeHatsu);
-            if(timeHatsu < 30) {
-                danger = true;
-                if(!hasWarned30SecHatsu) { speakText("初コメ、30秒前"); hasWarned30SecHatsu = true; }
-            }
-            if (timeHatsu <= END_THRESHOLD) gameOver = true;
-        }
-
-        // (5) 同接維持タイマー
-        if (useDousetsu) {
-            // 同接が閾値以下のときカウントダウン
-            const th = parseInt(document.getElementById('resetViewerThreshold').value);
-            if (sessionData.currentViewers <= th) {
-                timeDousetsu -= deltaSec;
-            } else {
-                // 回復したらリセットするか、カウントを止めるか。
-                // 従来のEnduranceルールでは回復したらリセットが一般的。
-                // ユーザー要望「片方が-10sになれば終り」なので、カウントダウン状態の維持が必要。
-                // ここでは「閾値を上回ったらタイマーリセット」とします。
-                timeDousetsu = DOUSETSU_LIMIT; 
-                hasWarned30SecDousetsu = false; 
-            }
-
-            updateTimerUI('dousetsu', timeDousetsu);
+            const hatsuLimitMinutes = parseFloat(document.getElementById('val_no_first_min').value);
+            const hatsuLimitMs = hatsuLimitMinutes * 60 * 1000;
+            const elapsed = now - lastManualFirstActionTime;
+            const remainingMs = hatsuLimitMs - elapsed;
+            const remainingSec = Math.ceil(remainingMs / 1000);
             
-            if(timeDousetsu < 30) {
+            updateTimerUI('hatsu', remainingSec);
+            
+            if(remainingSec < 30) {
                 danger = true;
-                if(!hasWarned30SecDousetsu) { speakText("同接維持、30秒前"); hasWarned30SecDousetsu = true; }
+                if(!hasWarned30SecHatsu && remainingSec > 0) { speakText("初コメ、30秒前"); hasWarned30SecHatsu = true; }
             }
-            if (timeDousetsu <= END_THRESHOLD) gameOver = true;
+            if (remainingSec <= -10) gameOver = true;
         }
 
-        // ゲームオーバー判定
+        // (5) 同接維持タイマー (Input Variable Logic & Emergency Check)
+        if (useDousetsu) {
+            const th = parseInt(document.getElementById('resetViewerThreshold').value);
+            const dousetsuLimitMinutes = parseFloat(document.getElementById('resetDurationMinutes').value);
+            const dousetsuLimitMs = dousetsuLimitMinutes * 60 * 1000;
+            
+            if (sessionData.currentViewers <= th) {
+                if (!dousetsuDropStartTime) dousetsuDropStartTime = now;
+                const elapsed = now - dousetsuDropStartTime;
+                const remainingMs = dousetsuLimitMs - elapsed;
+                const remainingSec = Math.ceil(remainingMs / 1000);
+
+                // Emergency API Check
+                if ([30, 10, 5, -5].includes(remainingSec)) {
+                    if (lastDousetsuCheckSec !== remainingSec) {
+                        if(!isDemo) updateStatsSingle(); // Force API Check
+                        lastDousetsuCheckSec = remainingSec;
+                    }
+                }
+                
+                updateTimerUI('dousetsu', remainingSec);
+                
+                if(remainingSec < 30) {
+                    danger = true;
+                    if(!hasWarned30SecDousetsu && remainingSec > 0) { speakText("同接維持、30秒前"); hasWarned30SecDousetsu = true; }
+                }
+                if (remainingSec <= -10) gameOver = true;
+
+            } else {
+                // Recovered
+                dousetsuDropStartTime = null;
+                hasWarned30SecDousetsu = false;
+                // Show full time (ready state)
+                updateTimerUI('dousetsu', dousetsuLimitMinutes * 60);
+            }
+        }
+
         if (gameOver) {
             finishSession("GAME OVER (-10s到達)");
         }
         
-        // ポイント赤字点滅処理
         const scoreEl = document.getElementById('totalPoints');
         if (danger) {
             scoreEl.classList.add('danger-text', 'blink-anim');
@@ -878,7 +877,6 @@
         const timeEl = document.getElementById(`${type}-time`);
         const msgEl = document.getElementById(`${type}-msg`);
         
-        // マイナスになっても表示
         const absSeconds = Math.abs(seconds);
         const m = Math.floor(absSeconds / 60).toString().padStart(2, '0');
         const s = Math.floor(absSeconds % 60).toString().padStart(2, '0');
@@ -887,7 +885,6 @@
 
         if (seconds < 30) {
             timeEl.classList.add('danger-text', 'blink-anim');
-            // ポップアップ中以外は警告メッセージ
             if (!msgEl.classList.contains('pop-msg')) {
                 if (seconds < 0) {
                     msgEl.innerText = "終了まであと少し...";
@@ -897,41 +894,27 @@
             }
         } else {
             timeEl.classList.remove('danger-text', 'blink-anim');
-            // ポップアップ中以外は通常メッセージ
             if (!msgEl.classList.contains('pop-msg')) {
                 msgEl.innerText = (type === 'hatsu') ? "コメント待ち..." : "維持してね！";
             }
         }
     }
 
-    // 初コメタイマー（または+1ボタン）クリック時のアクション
     function manualHatsuAction() {
         if(!isTracking) return;
-        
-        // ポイント加算
         sessionData.manualFirstComments++; 
         
-        // タイマーリセット（初コメモード有効時のみ）
-        if (document.getElementById('cond_no_first').checked) {
-            timeHatsu = HATSU_LIMIT;
-            hasWarned30SecHatsu = false; // 警告フラグリセット
-            
-            // お礼メッセージ
-            const msgEl = document.getElementById('hatsu-msg');
-            msgEl.innerText = "はつコメありがとうございます。\nゆっくり見ていってくださいね。";
-            msgEl.classList.add('pop-msg');
-            
-            // 赤文字解除
-            const timeEl = document.getElementById('hatsu-time');
-            timeEl.classList.remove('danger-text', 'blink-anim');
-            
-            // 時間即時反映
-            timeEl.innerText = "02:00";
-
-            setTimeout(() => {
-                msgEl.classList.remove('pop-msg');
-            }, 5000);
-        }
+        // Reset Logic: Just update the timestamp
+        lastManualFirstActionTime = Date.now();
+        hasWarned30SecHatsu = false;
+        
+        const msgEl = document.getElementById('hatsu-msg');
+        msgEl.innerText = "はつコメありがとうございます。\nゆっくり見ていってくださいね。";
+        msgEl.classList.add('pop-msg');
+        
+        setTimeout(() => {
+            msgEl.classList.remove('pop-msg');
+        }, 5000);
 
         speakText("はつコメ、ありがとうございます。ゆっくりしていってくださいね。");
     }
@@ -970,7 +953,6 @@
         document.body.classList.remove('tracking');
         document.getElementById('subManualControls').style.display = 'none';
         
-        // Final Sync
         visualState.totalPoints = calculatePoints();
         visualState.subCount = sessionData.currentSubCount;
         visualState.totalComments = sessionData.totalComments;
@@ -980,7 +962,6 @@
         saveToHistory(rec); setStatus(`終了！結果: ${pt} pt`, "");
         
         speakText("計測を終了しました。おつかれい！！");
-        
         alert(`おつかれさま！\n理由: ${reason}\n結果: ${pt} pt\n(現在の同接: ${sessionData.currentViewers}人 で集計しました)`); 
         updateSessionInfo();
     }
