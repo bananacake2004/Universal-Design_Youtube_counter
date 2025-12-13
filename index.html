@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (Smooth Extreme)</title>
+    <title>耐久カウンター Jewel Ocean (True Last Stand)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -166,7 +166,7 @@
             <div>
                 <div class="input-group">
                     <label>⏱️ 目標時間 (時間)</label>
-                    <input type="number" id="targetHours" value="12" min="1" oninput="calculateSafeIntervals()" onkeyup="calculateSafeIntervals()" onchange="calculateSafeIntervals()">
+                    <input type="number" id="targetHours" value="12" min="1" step="0.5" oninput="calculateSafeIntervals()" onkeyup="calculateSafeIntervals()" onchange="calculateSafeIntervals()">
                 </div>
                 <div class="input-group">
                     <label>🛡️ 推奨間隔 (自動計算)</label>
@@ -199,11 +199,11 @@
             </div>
             <div class="condition-row">
                 <label class="cond-label"><input type="checkbox" id="cond_no_first"> (4) 初見枯渇リセット</label>
-                <span>：<input type="number" id="val_no_first_min" value="10" style="width:60px;"> 分間、手動追加がないとRESET</span>
+                <span>：<input type="number" id="val_no_first_min" value="10" step="0.1" style="width:60px;"> 分間、手動追加がないとRESET</span>
             </div>
             <div class="condition-row">
                 <label class="cond-label"><input type="checkbox" id="cond_low_viewers" checked> (5) 過疎リセット</label>
-                <span>：同接 <input type="number" id="resetViewerThreshold" value="10" style="width:60px;"> 人以下が <input type="number" id="resetDurationMinutes" value="5" style="width:60px;"> 分続くとRESET</span>
+                <span>：同接 <input type="number" id="resetViewerThreshold" value="10" style="width:60px;"> 人以下が <input type="number" id="resetDurationMinutes" value="5" step="0.1" style="width:60px;"> 分続くとRESET</span>
             </div>
             <div style="font-size:0.85rem; color:#636e72; margin-top:5px;">※チェックが無い場合は (1) 無制限カウントモード になります</div>
         </div>
@@ -317,6 +317,7 @@
     let hasWarned30Sec = false;
     
     let lastManualFirstActionTime = 0;
+    let lastEmergencyCheckSec = null; 
 
     let sessionData = { startTime: null, startSubCount: 0, currentSubCount: 0, totalComments: 0, manualFirstComments: 0, currentViewers: 0 };
     let videoId = "", channelId = "", liveChatId = null, nextPageToken = null;
@@ -560,6 +561,7 @@
             nextBeepTime = 0; 
             hasWarned1Min = false;
             hasWarned30Sec = false;
+            lastEmergencyCheckSec = null;
             
             // Initial Visual State
             visualState.subCount = sessionData.currentSubCount;
@@ -610,12 +612,14 @@
         }
         try {
             if(isDemo) { await demoSimulate(); } else {
-                if(!isEmergency) {
-                    const key = getNextApiKey();
-                    await fetchComments(key);
-                } else { console.log("緊急モード: コメント取得を一時停止中..."); }
+                // Regular comment polling
+                const key = getNextApiKey();
+                await fetchComments(key);
+                
                 if (Date.now()-lastCommentReceivedTime >= NO_COMMENT_LIMIT_MS) { finishSession("コメント停止(30分)"); return; }
-                if (now - lastStatsTime >= 50000 && !isEmergency) { await updateStatsSingle(); }
+                
+                // Regular stats polling (if not emergency triggered recently)
+                if (now - lastStatsTime >= 50000) { await updateStatsSingle(); }
             }
             let w = Math.max(minMs, nextApiPollingMs); 
             if(isDemo) w = 2000; 
@@ -692,20 +696,18 @@
             if(sessionData.currentSubCount >= goalS) { finishSession(`🎉 登録者ゴール達成 (${goalS}人)`); return; }
         }
 
-        // (4) 初見枯渇リセット
+        // (4) 初見枯渇リセット (粘り腰モード対応版)
         if(useNoFirst) {
-            const limitMin = parseInt(document.getElementById('val_no_first_min').value);
+            const limitMin = parseFloat(document.getElementById('val_no_first_min').value);
             const limitMs = limitMin * 60 * 1000;
             const elapsed = Date.now() - lastManualFirstActionTime;
             const remainMs = limitMs - elapsed;
-            
-            if(remainMs <= 0) { finishSession(`⚠️ 初見さん枯渇 (${limitMin}分経過)`); return; }
             const remainSec = Math.ceil(remainMs / 1000);
+            
+            // 終了判定: -10秒まで耐える
+            if(remainSec <= -10) { finishSession(`⚠️ 初見さん枯渇 (${limitMin}分経過)`); return; }
 
-            // Beep at exactly X minutes (approx) logic inside loop requires debounce, 
-            // but for simplicity, we beep every 60s
-            // To prevent spam, check if we entered a new second that is divisible by 60
-            // Not perfect in RAF, but good enough for UI
+            // ビープ音 (1分ごと)
              if(remainSec > 0 && remainSec % 60 === 0 && remainSec !== window.lastBeepSec) {
                 playBeepSound();
                 window.lastBeepSec = remainSec;
@@ -713,14 +715,20 @@
                  window.lastBeepSec = null;
             }
 
-            if(remainSec < 60) statusText = `初見リセットまで`;
-            timerText = remainSec + "秒";
+            // 表示処理
+            if (remainSec <= 0) {
+                timerText = ""; // 0秒以下は隠す
+                statusText = "⚠️ 初見さん待ち...";
+            } else {
+                timerText = remainSec + "秒";
+                if(remainSec < 60) statusText = `初見リセットまで`;
+            }
         }
 
-        // (5) 過疎リセット
+        // (5) 過疎リセット (粘り腰モード対応版)
         if(useLowViewers) {
             const th = parseInt(document.getElementById('resetViewerThreshold').value);
-            const durMinutes = parseInt(document.getElementById('resetDurationMinutes').value);
+            const durMinutes = parseFloat(document.getElementById('resetDurationMinutes').value);
             
             if (sessionData.currentViewers <= th) {
                 if (!resetDeadline) {
@@ -731,22 +739,32 @@
                 }
                 
                 const remainingMs = resetDeadline - Date.now();
-                if(remainingMs <= 0) { finishSession("同接低下リセット"); return; }
                 const remainingSec = Math.ceil(remainingMs / 1000);
 
-                 // Beep logic for low viewers
-                if (Date.now() >= nextBeepTime) { playBeepSound(); nextBeepTime = Date.now() + 60000; }
+                // 終了判定: -10秒まで耐える
+                if(remainingSec <= -10) { finishSession("同接低下リセット"); return; }
 
+                // ビープ & 警告
+                if (Date.now() >= nextBeepTime) { playBeepSound(); nextBeepTime = Date.now() + 60000; }
                 if (remainingSec <= 60 && remainingSec > 0 && !hasWarned1Min) { speakText("のこり1分です"); hasWarned1Min = true; }
                 if (remainingSec <= 30 && remainingSec > 0 && !hasWarned30Sec) { speakText("30秒前。粘って！"); hasWarned30Sec = true; }
 
-                timerText = remainingSec;
-                if(!statusText.includes("初見")) statusText = "リセットまで"; // Priority
+                // 表示処理
+                if (remainingSec <= 0) {
+                    timerText = ""; // 0秒以下は隠す
+                    statusText = "⚠️ 緊急確認中...";
+                } else {
+                    timerText = remainingSec;
+                    if(!statusText.includes("初見")) statusText = "リセットまで"; // Priority
+                }
 
-                if ([30, 10, 5, 1].includes(remainingSec) && !isDemo) {
-                     // Emergency logic is handled in API loop, visual update only here
-                     const currentStatus = document.getElementById('statusBox').innerText;
-                     if(!currentStatus.includes("緊急")) setStatus(`⚠️ 緊急確認中...`, "warning");
+                // 緊急API確認 (30, 10, 5, 0, -5)
+                if ([30, 10, 5, 0, -5].includes(remainingSec) && !isDemo) {
+                     if (lastEmergencyCheckSec !== remainingSec) {
+                         setStatus(`⚠️ 緊急確認中... (${remainingSec}s)`, "warning"); 
+                         updateStatsSingle();
+                         lastEmergencyCheckSec = remainingSec;
+                     }
                 } else {
                      const currentStatus = document.getElementById('statusBox').innerText;
                      if(!currentStatus.includes("緊急")) setStatus(`⚠️ 同接低下中...`, "warning");
@@ -761,7 +779,7 @@
                 if(!isDemo && !statusText.includes("初見")) setStatus("🚀 計測中！順調です", "active");
             }
         } else {
-            if(!useNoFirst) resetDeadline = null;
+            if(!useNoFirst && !useLowViewers) resetDeadline = null;
         }
 
         document.getElementById('conditionStatusText').innerText = statusText;
@@ -781,7 +799,7 @@
         if(!isManualSub && Math.random() > 0.8) sessionData.currentSubCount += 1;
     }
 
-    function adjustSub(amount) { if(!isTracking) return; sessionData.currentSubCount += amount; } // Removed direct update
+    function adjustSub(amount) { if(!isTracking) return; sessionData.currentSubCount += amount; } 
 
     async function finishSession(reason) {
         if(!isTracking) return; 
@@ -802,7 +820,7 @@
         document.body.classList.remove('tracking');
         document.getElementById('subManualControls').style.display = 'none';
         
-        // Final Sync for accurate history
+        // Final Sync
         visualState.totalPoints = calculatePoints();
         visualState.subCount = sessionData.currentSubCount;
         visualState.totalComments = sessionData.totalComments;
@@ -851,7 +869,7 @@
         if(isTracking){ 
             sessionData.manualFirstComments++; 
             lastManualFirstActionTime = Date.now(); 
-            // Removed updateDisplay(), handled by loop
+            speakText("初コメありがとうございます"); 
         } 
     }
     function extractVideoId(u){ const m=u.match(/^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/); return (m&&m[7].length==11)?m[7]:false; }
