@@ -596,7 +596,7 @@
             if (sessionData.currentViewers <= th) {
                 if (!resetDeadline) {
                     resetDeadline = Date.now() + (durMinutes * 60 * 1000);
-                    speakText("接続人数が目標値を下回りました"); 
+                    speakText("接続人数が、もくひょうちを下回りました"); 
                     nextBeepTime = Date.now() + 60000;
                     hasWarned1Min = false; hasWarned30Sec = false;
                 }
@@ -667,7 +667,7 @@
         const rec = { id: Date.now(), points: pt, startTime: sessionData.startTime.toLocaleString(), endTime: new Date().toLocaleString(), subDiff: Math.max(0, sessionData.currentSubCount - sessionData.startSubCount), firstComments: sessionData.manualFirstComments, totalComments: sessionData.totalComments, reason: reason };
         saveToHistory(rec); setStatus(`終了！結果: ${pt} pt`, "");
         if(reason === "同接低下リセット") { speakText("接続人数が目標を下回ったため、停止しました。おつかれさまでございました！！"); } 
-        else { speakText("計測を終了しました。おつかれい！！"); }
+        else { speakText("計測を終了しました。おつかれいいいいいい！！"); }
         alert(`おつかれさま！\n理由: ${reason}\n結果: ${pt} pt\n(現在の同接: ${sessionData.currentViewers}人 で集計しました)`); 
         updateSessionInfo();
     }
