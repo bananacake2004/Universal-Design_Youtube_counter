@@ -733,7 +733,7 @@
             if (sessionData.currentViewers <= th) {
                 if (!resetDeadline) {
                     resetDeadline = Date.now() + (durMinutes * 60 * 1000);
-                    speakText("接続人数が目標値を下回りました"); 
+                    speakText("接続人数が目標を下回りました"); 
                     nextBeepTime = Date.now() + 60000;
                     hasWarned1Min = false; hasWarned30Sec = false;
                 }
