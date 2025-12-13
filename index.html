@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (Fix Ver.)</title>
+    <title>耐久カウンター Jewel Ocean (Final Fix)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -383,11 +383,12 @@
 <div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li><li>※複数アカウントで作成したキーを入力すると制限が緩和されます！</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;">閉じる</button></div></div>
 
 <script>
-    const HISTORY_KEY = "yt_endurance_v25", QUOTA_KEY = "yt_api_quota_pt_v1";
+    const HISTORY_KEY = "yt_endurance_v26", QUOTA_KEY = "yt_api_quota_pt_v1";
     const NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
     const QUOTA_PER_KEY = 10000;
     
     let isTracking = false;
+    let isFinishing = false; // エンドレスアラート防止用フラグ
     let lastStatsTime = 0; 
     let nextApiPollingMs = 0; 
     let lastCommentReceivedTime = 0;
@@ -637,6 +638,7 @@
         try {
             await initSession(); 
             isTracking = true;
+            isFinishing = false; // フラグリセット
             document.body.classList.add('tracking');
             document.getElementById('apiKey').classList.add('api-hidden');
 
@@ -910,14 +912,14 @@
         hasWarned30SecHatsu = false;
         
         const msgEl = document.getElementById('hatsu-msg');
-        msgEl.innerText = "初コメありがとうございます。\n ゆっくり見ていってくださいね。";
+        msgEl.innerText = "初コメありがとうございます。\nゆっくりしていってくださいね☆彡";
         msgEl.classList.add('pop-msg');
         
         setTimeout(() => {
             msgEl.classList.remove('pop-msg');
         }, 5000);
 
-        speakText("はつコメ、ありがとうございます。ゆっくりしていってくださいね。");
+        speakText("はつコメ、ありがとうございます。ゆっくりしていってくださいねっ。");
     }
 
     async function demoSimulate() {
@@ -936,7 +938,10 @@
     function adjustSub(amount) { if(!isTracking) return; sessionData.currentSubCount += amount; } 
 
     async function finishSession(reason) {
-        if(!isTracking) return; 
+        // 重複実行防止ロック
+        if(!isTracking || isFinishing) return; 
+        isFinishing = true; // ロック開始
+
         setStatus("📊 最終集計中...", "warning");
         if(!isDemo) {
             try {
@@ -950,6 +955,8 @@
                 }
             } catch(e) { console.error("最終集計エラー:", e); }
         }
+        
+        // ループ停止
         isTracking = false; 
         document.body.classList.remove('tracking');
         document.getElementById('subManualControls').style.display = 'none';
@@ -963,6 +970,8 @@
         saveToHistory(rec); setStatus(`終了！結果: ${pt} pt`, "");
         
         speakText("計測を終了しました。おつかれい！！");
+        
+        // アラート表示（この後に再実行されないようにロック済み）
         alert(`おつかれさま！\n理由: ${reason}\n結果: ${pt} pt\n(現在の同接: ${sessionData.currentViewers}人 で集計しました)`); 
         updateSessionInfo();
     }
@@ -1018,4 +1027,4 @@
     }
 </script>
 </body>
-                                                                        </html>
+</html>
