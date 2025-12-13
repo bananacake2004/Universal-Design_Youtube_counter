@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (Final Fix)</title>
+    <title>耐久カウンター Jewel Ocean (Final Perfect)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -329,7 +329,10 @@
             </div>
             <div class="stat-box">
                 <span class="stat-num" id="dispFirst">0</span>
-                <button class="btn-manual" onclick="manualHatsuAction()">+1</button>
+                <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+                    <button class="btn-adj btn-minus" onclick="adjustFirst(-1)">-1</button>
+                    <button class="btn-manual" onclick="manualHatsuAction()">+1 / Reset</button>
+                </div>
                 <span class="stat-label">🎉 初コメ (回数)</span>
                 <div style="font-size:0.8rem; color:#aaa; margin-top:5px;">(タイマー押下も可)</div>
             </div>
@@ -383,12 +386,12 @@
 <div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li><li>※複数アカウントで作成したキーを入力すると制限が緩和されます！</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;">閉じる</button></div></div>
 
 <script>
-    const HISTORY_KEY = "yt_endurance_v26", QUOTA_KEY = "yt_api_quota_pt_v1";
+    const HISTORY_KEY = "yt_endurance_v27", QUOTA_KEY = "yt_api_quota_pt_v1";
     const NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
     const QUOTA_PER_KEY = 10000;
     
     let isTracking = false;
-    let isFinishing = false; // エンドレスアラート防止用フラグ
+    let isFinishing = false;
     let lastStatsTime = 0; 
     let nextApiPollingMs = 0; 
     let lastCommentReceivedTime = 0;
@@ -772,7 +775,6 @@
         const useDousetsu = document.getElementById('cond_low_viewers').checked;
 
         let danger = false;
-        let gameOver = false;
 
         // (2) 同接ゴール
         if(useGoalViewers) {
@@ -818,9 +820,9 @@
             
             if(remainingSec < 30) {
                 danger = true;
-                if(!hasWarned30SecHatsu && remainingSec > 0) { speakText("初コメ、30秒前"); hasWarned30SecHatsu = true; }
+                if(!hasWarned30SecHatsu && remainingSec > 0) { speakText("はつこめ、30秒前"); hasWarned30SecHatsu = true; }
             }
-            if (remainingSec <= -10) gameOver = true;
+            if (remainingSec <= -10) { finishSession("終了：初コメ時間切れ"); return; }
         }
 
         // (5) 同接維持タイマー (Input Variable Logic & Emergency Check)
@@ -849,7 +851,7 @@
                     danger = true;
                     if(!hasWarned30SecDousetsu && remainingSec > 0) { speakText("同接維持、30秒前"); hasWarned30SecDousetsu = true; }
                 }
-                if (remainingSec <= -10) gameOver = true;
+                if (remainingSec <= -10) { finishSession("終了：同接低下"); return; }
 
             } else {
                 // Recovered
@@ -858,10 +860,6 @@
                 // Show full time (ready state)
                 updateTimerUI('dousetsu', dousetsuLimitMinutes * 60);
             }
-        }
-
-        if (gameOver) {
-            finishSession("GAME OVER (-10s到達)");
         }
         
         const scoreEl = document.getElementById('totalPoints');
@@ -912,14 +910,21 @@
         hasWarned30SecHatsu = false;
         
         const msgEl = document.getElementById('hatsu-msg');
-        msgEl.innerText = "初コメありがとうございます。\nゆっくりしていってくださいね☆彡";
+        msgEl.innerText = "初コメありがとうございます。\nゆっくり見ていってくださいね☆彡";
         msgEl.classList.add('pop-msg');
         
         setTimeout(() => {
             msgEl.classList.remove('pop-msg');
         }, 5000);
 
-        speakText("はつコメ、ありがとうございます。ゆっくりしていってくださいねっ。");
+        speakText("はつこめ、ありがとうございます。ゆっくりしていってくださいねー。");
+    }
+
+    function adjustFirst(amount) {
+        if(!isTracking) return;
+        sessionData.manualFirstComments += amount;
+        // 0未満にはしない
+        if (sessionData.manualFirstComments < 0) sessionData.manualFirstComments = 0;
     }
 
     async function demoSimulate() {
