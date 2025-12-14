@@ -1,17 +1,16 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jewel Ocean: AI-Predicted 1800 Target (Fixed V2)</title>
+    <title>Jewel Ocean: Z+4 Ultimate Logic</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
     <style>
-        /* --- デザイン定義 --- */
         :root {
             --bg-grad-1: #a18cd1; --bg-grad-2: #fbc2eb;
-            --glass-bg: rgba(255, 255, 255, 0.92); --glass-border: rgba(255, 255, 255, 0.6);
+            --glass-bg: rgba(255, 255, 255, 0.95); --glass-border: rgba(255, 255, 255, 0.6);
             --text-main: #2d3436; --text-sub: #636e72;
             --accent-color: #6c5ce7;
             --warn-color: #e74c3c;
@@ -23,7 +22,6 @@
             background-image: linear-gradient(120deg, #89f7fe 0%, #66a6ff 100%);
             background-attachment: fixed; overflow-x: hidden;
         }
-        /* 背景アニメーション */
         .bubbles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; pointer-events: none; }
         .bubble { position: absolute; bottom: -100px; background-color: rgba(255, 255, 255, 0.3); border-radius: 50%; animation: rise 15s infinite ease-in; }
         .bubble:nth-child(1) { width: 40px; height: 40px; left: 10%; animation-duration: 8s; }
@@ -52,12 +50,10 @@
         
         .api-hidden { -webkit-text-security: disc; } 
         
-        /* AI分析ボックス */
         .ai-forecast-box { 
             margin-top: 10px; background: #f0f3ff; border: 2px dashed #6c5ce7; border-radius: 16px; padding: 16px; 
-            font-size: 0.95rem; color: #2d3436; line-height: 1.6;
+            font-size: 0.95rem; color: #2d3436; line-height: 1.6; display: none;
         }
-        .ai-highlight { font-weight: bold; color: #6c5ce7; }
         
         .condition-box { background: #fff; border: 2px solid #dfe6e9; border-radius: 16px; padding: 16px; margin-bottom: 20px; }
         .condition-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
@@ -216,7 +212,7 @@
         </div>
         
         <div id="aiForecastBox" class="ai-forecast-box">
-            🤖 <b>AI予測・設定分析:</b> 入力するとここに提案が表示されます
+            🤖 <b>AI予測:</b> 情報入力待ち...
         </div>
         
         <h3 style="color:var(--text-sub); border-bottom:1px solid #eee; padding-bottom:5px; margin-top:20px;">🛑 終了・リセット条件 (マルチタスク)</h3>
@@ -360,16 +356,17 @@
 <div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li><li>※複数アカウントで作成したキーを入力すると制限が緩和されます！</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;" type="button">閉じる</button></div></div>
 
 <script>
-    // --- グローバル変数 & 定数 ---
-    const HISTORY_KEY = "yt_endurance_v45_fix";
+    const HISTORY_KEY = "yt_endurance_v46_final";
     const QUOTA_KEY = "yt_api_quota_pt_v1";
     const CHANNEL_TREND_KEY = "yt_channel_trends_v2";
     
+    // 定数
     const API_KEY_LIMIT_MS = 3000; 
     const BATCH_TARGET = 1800;
     const NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
     const MAX_POLLING_ACTIVE = 60000; 
 
+    // グローバル変数
     let isTracking = false;
     let isFinishing = false;
     let currentPollingInterval = 5000; 
@@ -404,7 +401,7 @@
         displayApiQuota(); 
         updateVisibility(); 
         loadTrendsFromStorage(); 
-        updateForecast(); // 初回実行
+        updateForecast(); 
         requestAnimationFrame(updateVisualsLoop); 
     };
     
@@ -419,8 +416,7 @@
         document.getElementById('timer-dousetsu').classList.toggle('active', useDousetsu);
     }
 
-    // --- (1) APIキー管理の完全修正 ---
-    // ここが不具合の原因でした。常に入力欄から最新の値を取るように修正。
+    // --- (1) APIキー管理 ---
     function getApiKeys() {
         const el = document.getElementById('apiKeyInput');
         if(!el) return [];
@@ -430,7 +426,6 @@
         return [...new Set(keys)];
     }
     
-    // 実際に使用する直前に必ずリストを更新するヘルパー
     function refreshApiKeys() {
         apiKeys = getApiKeys();
         if(currentKeyIndex >= apiKeys.length) currentKeyIndex = 0;
@@ -443,10 +438,14 @@
         return key;
     }
 
-    // --- (2) & (3) AI提案と最短表示の修正 ---
-    // 入力があるたびに呼び出され、予測値を画面に反映します
+    function getDailyLimitPerKey(zHours) {
+        if (zHours <= 6) return 9800;
+        if (zHours <= 19) return 9000;
+        return 8500;
+    }
+
+    // --- (2) & (3) AI提案と最短表示 (Z+4ロジック) ---
     function updateForecast() {
-        // ID不整合の修正に伴い、ここでも確実にキーを取得
         refreshApiKeys();
         
         const isAi = document.getElementById('autoSpeedCheck').checked;
@@ -456,57 +455,50 @@
         const h = parseFloat(document.getElementById('targetHours').value);
         if(!h || h <= 0) { display.innerText = "--"; return; }
 
-        const keyCount = Math.max(1, apiKeys.length);
+        // 空でも1と仮定して計算
+        const calcKeyCount = Math.max(1, apiKeys.length);
 
         // 物理限界: キー1個につき3秒
-        const minPhysicalMs = API_KEY_LIMIT_MS / keyCount; 
+        const minPhysicalMs = API_KEY_LIMIT_MS / calcKeyCount; 
 
-        // Z-Logic (安全基準値): 残りAPI配分から計算
-        const quota = 10000; 
-        const used = getTodayQuota();
-        const remain = Math.max(0, quota - used);
-        const maxRequests = Math.floor(remain / 5); 
-        const targetMs = h * 3600 * 1000;
-        let zMs = targetMs / Math.max(1, maxRequests);
+        // Z+4 ロジック
+        const limitPerKey = getDailyLimitPerKey(h);
+        const totalLimit = limitPerKey * calcKeyCount;
+        const pointsPerHour = totalLimit / (h + 4);
         
-        // Z値は物理限界を下回れない
-        calculatedZInterval = Math.max(minPhysicalMs, zMs);
+        // 1回5ptと仮定して間隔を算出
+        // Points/Hour = (3600 / IntervalSec) * 5
+        // IntervalSec = 3600 * 5 / PointsPerHour
+        const safeIntervalSec = (3600 * 5) / pointsPerHour;
+        calculatedZInterval = safeIntervalSec * 1000;
+        
+        // 物理限界より速くはなれない
+        if (calculatedZInterval < minPhysicalMs) calculatedZInterval = minPhysicalMs;
 
-        // --- (3) AIによる提案ロジック ---
-        // 過去最大CPMを検索
-        let estimatedCPM = 50; // デフォルト値 (過疎ではない程度)
+        // --- AIによる提案ロジック ---
+        let estimatedCPM = 50; 
         let maxPastCPM = 0;
         Object.values(channelTrends).forEach(hourlyAry => {
             if(Array.isArray(hourlyAry)) hourlyAry.forEach(v => { if(v>maxPastCPM) maxPastCPM=v; });
         });
         if(maxPastCPM > 0) estimatedCPM = maxPastCPM;
         
-        // 推定消費pt
-        let estimatedCost = 0;
-        // 1800コメ溜まる時間(秒) = (1800 / CPM) * 60
+        // 1800コメ溜まる時間(秒)
         let secondsToFill1800 = (1800 / Math.max(1, estimatedCPM)) * 60;
-        // APIリクエスト間隔 (秒) = max(物理限界, 1800到達時間, Z値) ※AIモード時
-        // ここでは理想値として計算
-        let idealIntervalSec = Math.max(minPhysicalMs/1000, secondsToFill1800);
-        idealIntervalSec = Math.min(idealIntervalSec, 60); // 60秒キャップ
         
-        // 総リクエスト回数 = (時間*3600) / 間隔
-        let totalReq = (h * 3600) / idealIntervalSec;
-        estimatedCost = totalReq * 5; // 1回5pt
+        // 必要キー数 (3秒ルール / 到達時間)
+        let neededKeys = Math.ceil(3.0 / secondsToFill1800);
+        if(neededKeys < 1) neededKeys = 1;
 
-        // メッセージ構築
         let msg = `🤖 <b>AI分析:</b><br>`;
+        msg += `・目標: ${h}時間 (上限${limitPerKey}pt/key)<br>`;
+        msg += `・安全速度(Z+4): <b>${(calculatedZInterval/1000).toFixed(1)}秒</b>間隔<br>`;
         msg += `・過去最大勢い: 約${Math.round(estimatedCPM)} CPM (推定)<br>`;
-        msg += `・予想消費: <b>${Math.round(estimatedCost).toLocaleString()} pt</b> (残: ${remain})<br>`;
         
-        // 必要キー数の提案
-        // 物理限界(3秒/キー)が 1800到達時間(secondsToFill1800) より短くないと詰まる
-        // キー数 > 3秒 / 到達時間
-        let requiredKeys = Math.ceil(3.0 / secondsToFill1800);
-        if(requiredKeys < 1) requiredKeys = 1;
-        
-        if(apiKeys.length < requiredKeys) {
-            msg += `<span style="color:#e74c3c; font-weight:bold;">⚠️ キー数が不足する可能性があります (推奨: ${requiredKeys}個以上)</span>`;
+        if (apiKeys.length === 0) {
+             msg += `<span style="color:#e74c3c; font-weight:bold;">⚠️ APIキーが未入力です (キー1個の計算: ${(calculatedZInterval/1000).toFixed(1)}s)</span>`;
+        } else if(apiKeys.length < neededKeys) {
+            msg += `<span style="color:#e74c3c; font-weight:bold;">⚠️ キー不足の可能性 (推奨: ${neededKeys}個以上)</span>`;
         } else {
             msg += `<span style="color:#00b894; font-weight:bold;">✅ 現在のキー数(${apiKeys.length}個)で十分対応可能です</span>`;
         }
@@ -514,19 +506,15 @@
         box.style.display = "block";
         box.innerHTML = msg;
 
-        // --- (2) 表示ロジック (AIオフでも表示) ---
-        // AIモードON: 変動範囲を表示
-        // AIモードOFF: 固定値(Z or 下限)を表示
-        
-        // Youtube提示値のデフォルトは5sとする
+        // --- 表示ロジック ---
+        // YouTube提示値のデフォルトは5sとする
         let safeLowerLimit = Math.max(minPhysicalMs, 5000); 
 
         if(isAi) {
-            display.innerHTML = `🤖 Auto: <b>${(safeLowerLimit/1000).toFixed(2)}s</b> 〜 <b>${(calculatedZInterval/1000).toFixed(1)}s</b> (Max60s)`;
+            display.innerHTML = `🤖 Auto: <b>${(minPhysicalMs/1000).toFixed(2)}s</b> 〜 <b>${(calculatedZInterval/1000).toFixed(1)}s</b> (Max60s)`;
             display.style.color = "#6c5ce7";
         } else {
-            // AIオフ時は、Z値(安全)とYouTube提示(5s)と物理限界の中で「最も安全(長い)」ものを採用
-            // ユーザー要件: "最短であってこれを下回ってはいけない"
+            // 最短更新間隔（安全圏）を表示
             let fixedVal = Math.max(safeLowerLimit, calculatedZInterval); 
             display.innerText = `🛡️ 固定設定: ${(fixedVal/1000).toFixed(1)}秒間隔`;
             display.style.color = "#00b894";
@@ -539,8 +527,7 @@
         if (checkInterval) clearInterval(checkInterval);
         if (isTracking) return;
 
-        // 開始直前に必ずキーを更新
-        refreshApiKeys();
+        refreshApiKeys(); // 確実に更新
         
         if(!document.getElementById('demoModeCheck').checked && apiKeys.length === 0) return alert("APIキーを入力してください");
         if (!checkQuotaSafe()) return alert("API上限のため開始できません");
@@ -583,7 +570,6 @@
 
     function stopTrackingManual() { if(isTracking) finishSession("手動STOP"); }
 
-    // --- 高度なAI予測 (初期化) ---
     async function initSession() {
         if(isDemo) { 
             sessionData = { startTime: new Date(), startSubCount: 10000, currentSubCount: 10000, totalComments: 0, manualFirstComments: 0, currentViewers: 50 }; 
@@ -611,41 +597,31 @@
         sessionData = { startTime: new Date(), startSubCount: initialSub, currentSubCount: initialSub, totalComments: 0, manualFirstComments: 0, currentViewers: parseInt(v.liveStreamingDetails.concurrentViewers||0) };
         nextPageToken = null;
 
-        // ■ 初期速度決定ロジック
+        // ■ 初期速度決定 (Z+4)
         refreshApiKeys();
-        const keyCount = Math.max(1, apiKeys.length);
-        const minPhysicalMs = API_KEY_LIMIT_MS / keyCount; 
-
-        // 最新のZ値を計算
-        updateForecast(); 
+        updateForecast(); // Z値最新化
+        
         let startMs = calculatedZInterval;
-
+        
         // 過去データ参照
         let predictedCPM = 0;
         if (channelId && channelTrends[channelId]) {
             const h = new Date().getHours();
             predictedCPM = channelTrends[channelId][h] || 0;
         }
-
-        // データがない場合、登録者数からCPMをラフに予測
-        // 「登録者数や過去の最大コメ数から総合的に」
-        if (predictedCPM === 0) {
-            // 登録者1万人あたり10CPM程度と仮定(係数0.001)
-            predictedCPM = Math.max(10, initialSub * 0.001); 
-        }
+        if (predictedCPM === 0) predictedCPM = Math.max(10, initialSub * 0.001); 
 
         if (predictedCPM > 0) {
-            // 目標1800コメにかかる時間
             const historyMs = (BATCH_TARGET / predictedCPM) * 60000;
-            // 安全策: 予測より少し早めに設定 (historyMs * 0.8)
-            // ただしYouTube提示値(5000ms)を下回らないように注意
-            startMs = Math.max(5000, Math.min(startMs, historyMs * 0.8));
-            setStatus(`📜 予測起動(${Math.round(predictedCPM)}CPM): ${(startMs/1000).toFixed(1)}s で開始`, "active");
+            // Z値と予測値の遅い方（安全側）を採用しつつ、あまりに遅すぎないように調整
+            startMs = Math.max(startMs, historyMs * 0.8);
+            setStatus(`📜 予測起動: ${(startMs/1000).toFixed(1)}s で開始`, "active");
         } else {
             setStatus(`🆕 初見起動: Z基準 ${(startMs/1000).toFixed(1)}s で開始`, "grace");
         }
 
-        // 物理限界と60秒の間に収める
+        const keyCount = Math.max(1, apiKeys.length);
+        const minPhysicalMs = API_KEY_LIMIT_MS / keyCount;
         currentPollingInterval = Math.min(MAX_POLLING_ACTIVE, Math.max(minPhysicalMs, startMs));
     }
 
@@ -656,7 +632,6 @@
         const now = Date.now();
         let itemCount = 0;
         
-        // 途中でのキー追加に対応するため毎回計算
         refreshApiKeys();
         const keyCount = Math.max(1, apiKeys.length);
         const minPhysicalMs = API_KEY_LIMIT_MS / keyCount; 
@@ -671,53 +646,34 @@
                 if (Math.random() < 0.2) { await updateStatsSingle(); }
             }
 
-            // --- AI変速ロジック (1800ターゲット) ---
             const timeDiff = now - lastFetchTime; 
             lastFetchTime = now;
-            
-            // 実測CPM
             const realRatePerMs = itemCount / (timeDiff || 1);
             const realCPM = realRatePerMs * 60000;
-            
             if(!isDemo && itemCount > 0) updateTrendData(Math.round(realCPM));
 
             if(document.getElementById('autoSpeedCheck').checked) {
                 let nextTargetMs = currentPollingInterval; 
-
                 if (itemCount === 0) {
-                    // 空振り: 少し待つ (最大20秒)
                     nextTargetMs = Math.min(20000, currentPollingInterval * 1.2);
                     setStatus(`💤 待機中 (${(nextTargetMs/1000).toFixed(1)}s)`, "grace");
                 } else {
-                    // コメントあり: 1800ターゲット補正
-                    // "予想が外れた際は、実情に合うように"
                     let idealMs = BATCH_TARGET / (realRatePerMs || 0.0001);
-                    
-                    // 平滑化
                     const blend = (itemCount > 1800) ? 0.8 : 0.4;
                     nextTargetMs = (currentPollingInterval * (1-blend)) + (idealMs * blend);
-                    
                     setStatus(`🚀 調整中 (実測${Math.round(realCPM)}CPM -> 次${(nextTargetMs/1000).toFixed(1)}s)`, "active");
                 }
-
-                // 制約: 
-                // 1. 物理限界(minPhysicalMs)
-                // 2. YouTube提示(youtubeSuggestedInterval)
-                // 3. 60秒(MAX_POLLING_ACTIVE)
                 let lowerLimit = Math.max(minPhysicalMs, youtubeSuggestedInterval);
                 currentPollingInterval = Math.min(MAX_POLLING_ACTIVE, Math.max(lowerLimit, nextTargetMs));
-                
             } else {
-                // 固定モード: Z値と物理限界とYouTube提示の「一番遅いもの」を守る
                 let limit = Math.max(minPhysicalMs, calculatedZInterval, youtubeSuggestedInterval);
                 currentPollingInterval = Math.min(MAX_POLLING_ACTIVE, limit);
                 setStatus(`🛡️ 固定 (${(currentPollingInterval/1000).toFixed(1)}s)`, "grace");
             }
-
         } catch (e) {
             console.error(e);
             if (e.message.includes("403") || e.message.includes("429")) {
-                setStatus(`⚠️ API制限検知(${e.message})。10秒待機`, "warn");
+                setStatus(`⚠️ API制限(${e.message})。10秒待機`, "warn");
                 await new Promise(r => setTimeout(r, 10000));
                 currentPollingInterval = Math.max(currentPollingInterval * 2, 10000);
                 lastFetchTime = Date.now(); 
@@ -725,11 +681,9 @@
                 await new Promise(r => setTimeout(r, 5000));
             }
         }
-        
         setTimeout(runApiLoop, currentPollingInterval);
     }
 
-    // --- データ取得・集計系 ---
     async function updateStatsSingle() { if(!isTracking && !isDemo) return; try { if(isDemo) return; const key = getNextApiKey(); const v = await fetchVideoDetails(videoId, key); sessionData.currentViewers = parseInt(v.liveStreamingDetails.concurrentViewers||0); } catch(e){} }
     function updateVisualsLoop() {
         if(isTracking) {
@@ -761,7 +715,6 @@
         channelTrends[channelId][currentHour] = Math.round((old * 0.7) + (cpm * 0.3));
     }
 
-    // --- その他 ---
     function checkConditionsAndTimer() {
         if(!isTracking) return;
         const now = Date.now();
@@ -770,7 +723,6 @@
         const useLimitComments = document.getElementById('cond_limit_comments').checked;
         const useHatsu = document.getElementById('cond_no_first').checked;
         const useDousetsu = document.getElementById('cond_low_viewers').checked;
-        
         let danger = false;
         
         if(useGoalViewers && (parseInt(document.getElementById('val_goal_viewers').value) - sessionData.currentViewers <= 0)) return finishSession("目標同接達成");
@@ -801,13 +753,10 @@
                 if (dousetsuDropStartTime !== null) {
                     speakText("同接、基準を上回りました。ナイスです。");
                     const m = document.getElementById('dousetsu-msg');
-                    m.innerText = "回復！ナイス！";
-                    m.classList.add('pop-msg');
+                    m.innerText = "回復！ナイス！"; m.classList.add('pop-msg');
                     setTimeout(()=>m.classList.remove('pop-msg'), 5000);
                 }
-                dousetsuDropStartTime = null; 
-                hasWarned30SecDousetsu = false; 
-                lastDousetsuAlertMin = -1; 
+                dousetsuDropStartTime = null; hasWarned30SecDousetsu = false; lastDousetsuAlertMin = -1; 
                 updateTimerUI('dousetsu', limitMs/1000);
             }
         }
@@ -863,7 +812,6 @@
         let count = 0; if (data.items && data.items.length > 0) { count = data.items.length; sessionData.totalComments += count; lastCommentReceivedTime = Date.now(); } if (data.nextPageToken) nextPageToken = data.nextPageToken; return count; }
     function extractVideoId(u){ const m=u.match(/^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/); return (m&&m[7].length==11)?m[7]:false; }
     function validateInputs(){ 
-        // ID修正に伴う検証ロジック修正
         const keyVal = document.getElementById('apiKeyInput').value;
         const urlVal = document.getElementById('url').value;
         if(!keyVal) return false; 
@@ -880,7 +828,7 @@
     function checkQuotaSafe() { if(document.getElementById('demoModeCheck').checked) return true; const u = JSON.parse(localStorage.getItem(QUOTA_KEY) || "{}"); return (u[new Date().toDateString()] || 0) < 10000; }
     function checkDstAndDisplayResetTime() { const n = new Date(); const isDst = n.getTimezoneOffset() < Math.max(new Date(n.getFullYear(),0,1).getTimezoneOffset(), new Date(n.getFullYear(),6,1).getTimezoneOffset()); const rh = isDst ? 16 : 17; if(document.getElementById('apiResetTimeDisplay')) document.getElementById('apiResetTimeDisplay').innerText = `${rh}:00 (JST)`; return rh; }
     async function previewVideo() { 
-        refreshApiKeys(); // ここで確実に更新
+        refreshApiKeys(); 
         const u=document.getElementById('url').value; const id=extractVideoId(u); if(!id) return alert("URL不正"); 
         try{ 
             const k=getNextApiKey(); 
