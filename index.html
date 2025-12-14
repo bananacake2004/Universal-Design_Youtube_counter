@@ -929,7 +929,7 @@
                 const remainingMs = dousetsuLimitMs - elapsed;
                 const remainingSec = Math.ceil(remainingMs / 1000);
 
-                if ([30, 10, 5, -5].includes(remainingSec)) {
+                if ([30, 10, 5, -7].includes(remainingSec)) {
                     if (lastDousetsuCheckSec !== remainingSec) {
                         if(!isDemo) updateStatsSingle(); 
                         lastDousetsuCheckSec = remainingSec;
