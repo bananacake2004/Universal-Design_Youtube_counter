@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (AI Forecast)</title>
+    <title>耐久カウンター Jewel Ocean (Real-Adapt AI)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -397,7 +397,7 @@
 <div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li><li>※複数アカウントで作成したキーを入力すると制限が緩和されます！</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;">閉じる</button></div></div>
 
 <script>
-    const HISTORY_KEY = "yt_endurance_v39_ai_forecast", QUOTA_KEY = "yt_api_quota_pt_v1", CHANNEL_TREND_KEY = "yt_channel_trends_v2";
+    const HISTORY_KEY = "yt_endurance_v38_real_adapt", QUOTA_KEY = "yt_api_quota_pt_v1", CHANNEL_TREND_KEY = "yt_channel_trends_v2";
     const NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
     const QUOTA_PER_KEY = 10000;
     const BATCH_TARGET = 1800; 
@@ -408,13 +408,16 @@
     let nextApiPollingMs = 0; 
     let lastCommentReceivedTime = 0;
     
+    // Auto Speed Logic Variables (CVT)
     let currentPollingInterval = 5000; 
     let youtubeSuggestedInterval = 5000; 
     let lastFetchTime = 0;
-    let historicalCpm = 0; 
+    let historicalCpm = 0; // The "Reference" speed for this hour
     
+    // Lightweight AI Memory
     let channelTrends = {}; 
     
+    // Timer Logic Variables
     let lastManualFirstActionTime = 0; 
     let dousetsuDropStartTime = null; 
     let lastDousetsuCheckSec = null; 
@@ -542,108 +545,6 @@
         return key;
     }
 
-    // --- AI Forecast System ---
-    async function predictApiKeyRequirement() {
-        calculateSafeIntervals(); // Basic Display Update
-        
-        const url = document.getElementById('url').value;
-        const targetHours = parseFloat(document.getElementById('targetHours').value);
-        if(!url || !targetHours) {
-            document.getElementById('aiForecastBox').style.display = "none";
-            return;
-        }
-        
-        const vid = extractVideoId(url);
-        if(!vid) return;
-        
-        // We need Channel ID to look up history. 
-        // Note: For prediction before Start, we can only guess if we already saw this URL or if user played this channel before.
-        // Since we can't fetch API just for prediction (waste of quota), we look for trends if we know the channel ID.
-        // Assuming user might input channel URL or we can infer it? No, usually just Video URL.
-        // Compromise: We will use general logic if unknown, or specific if known (after 1st run).
-        
-        // For this demo, we can't async fetch channel ID without user pressing start.
-        // So we will simulate the logic based on "If we knew the trend".
-        // BUT, if the user has used the app before, we might have `channelId` cached? No easy way map Vid -> Channel without API.
-        
-        // Let's implement a heuristic based on stored data if we can find a match, otherwise general.
-        // Actually, we can check if `channelTrends` has any data. If it has data, we can calculate an "Average User Load" as a baseline.
-        
-        // Simulation Logic:
-        let totalCost = 0;
-        const startHour = new Date().getHours();
-        let estimatedCPM = 10; // Default: Moderate/Slow
-        
-        // If we have ANY history, let's use the average of all channels as a "Big Data" baseline
-        const trendKeys = Object.keys(channelTrends);
-        if(trendKeys.length > 0) {
-            let totalCpmSum = 0;
-            let count = 0;
-            trendKeys.forEach(k => {
-                const arr = channelTrends[k];
-                const avg = arr.reduce((a,b)=>a+b,0) / 24; // Simple daily avg
-                if(avg > 0) { totalCpmSum += avg; count++; }
-            });
-            if(count > 0) estimatedCPM = totalCpmSum / count;
-        }
-        
-        // Loop through duration
-        for(let i=0; i<targetHours; i++) {
-            let h = (startHour + i) % 24;
-            // Use specific history if possible? (Hard without API call to get ChannelID first)
-            // We'll stick to the "Global Average" or "Default" for pre-start prediction
-            
-            // Calculate Cost for this hour
-            // Auto-CVT Logic Simulation
-            let interval = 5000;
-            if(document.getElementById('autoSpeedCheck').checked) {
-                // Target 1800 items per batch
-                // Rate = CPM / 60000 (items/ms)
-                // Interval = 1800 / Rate
-                // Interval = 1800 / (CPM/60000) = 1800 * 60000 / CPM = 108,000,000 / CPM
-                
-                // If CPM = 10, Interval = 10,800,000ms... Too big. Capped at 60s.
-                // If CPM = 1000, Interval = 108,000ms... Capped at 60s.
-                // Wait, logic check: 1800 items. If 1000/min (16/sec), takes 1.8 min (108s).
-                // So if CPM is high, interval is LONG. If CPM is low, interval is LONG.
-                // Actually, the limiting factor is "Max 60s wait".
-                
-                // Cost = (3600s / Interval) * 5pt
-                // If Interval is usually 60s (for any CPM < 1800), then cost is 300pt/hr.
-                
-                // Exception: Spike/Kick-down.
-                // If CPM > 1900/min (30/sec), we go 0.5s interval -> 120 calls/min -> 3600pt/hr.
-                
-                if(estimatedCPM > 1900) {
-                    totalCost += 3600; // Heavy load
-                } else {
-                    totalCost += 300; // Eco load (60s interval)
-                }
-            } else {
-                // Fixed Interval
-                const sec = parseFloat(document.getElementById('minIntervalSeconds').value);
-                totalCost += (3600 / sec) * 5;
-            }
-        }
-        
-        const requiredKeys = Math.ceil(totalCost / 10000);
-        
-        const box = document.getElementById('aiForecastBox');
-        box.style.display = "block";
-        
-        let msg = `🤖 <b>AI予測:</b> 推定消費 <b>${Math.round(totalCost).toLocaleString()} pt</b><br>`;
-        if(requiredKeys === 1) {
-            msg += `<span style="color:#00b894; font-weight:bold;">✅ APIキー 1個 で足ります (余裕あり)</span>`;
-        } else {
-            msg += `<span style="color:#d63031; font-weight:bold;">⚠️ APIキー ${requiredKeys}個 推奨</span>`;
-        }
-        
-        // Add disclaimer if using generic data
-        msg += `<br><span style="font-size:0.8em; color:#666;">※過去の傾向(ビッグデータ)から算出</span>`;
-        
-        box.innerHTML = msg;
-    }
-
     async function previewVideo() {
         if(document.getElementById('demoModeCheck').checked) { alert("デモモード中は動画確認は不要です"); return; }
         apiKeys = getApiKeys();
@@ -662,20 +563,6 @@
             if(channelTrends[d.snippet.channelId]) {
                 const currentHour = new Date().getHours();
                 const pastMax = channelTrends[d.snippet.channelId][currentHour] || 0;
-                
-                // RE-RUN PREDICTION WITH SPECIFIC DATA
-                const targetHours = parseFloat(document.getElementById('targetHours').value);
-                let totalCost = 0;
-                for(let i=0; i<targetHours; i++) {
-                    let h = (currentHour + i) % 24;
-                    let cpm = channelTrends[d.snippet.channelId][h] || 10;
-                    if(cpm > 1900) totalCost += 3600; else totalCost += 300;
-                }
-                const req = Math.ceil(totalCost / 10000);
-                const box = document.getElementById('aiForecastBox');
-                box.style.display = "block";
-                box.innerHTML = `🤖 <b>AI予測(特定):</b> このチャンネルの履歴データあり<br>消費予測: <b>${totalCost}pt</b> → キー <b>${req}個</b> 推奨`;
-                
                 if(pastMax > 50) {
                     setStatus(`⚠️ この時間帯は激流傾向 (${pastMax} CPM) - AI待機中`, "warning");
                     document.getElementById('autoSpeedCheck').checked = true;
@@ -850,6 +737,7 @@
             nextApiPollingMs = 0;
             currentPollingInterval = parseFloat(document.getElementById('minIntervalSeconds').value) * 1000;
             lastFetchTime = Date.now(); 
+            historicalCpm = 0;
             
             // Intelligent Start (Calculated Interval)
             if(!isDemo && channelId && channelTrends[channelId]) {
@@ -1051,7 +939,7 @@
             
             if (remaining <= 0) { finishSession(`終了：コメント数上限達成 (${limitC}件)`); return; }
             if (remaining <= 100) {
-                const tenDigit = Math.floor(remaining / 10);
+                const tenDigit = Math.floor(remaining / 100); // Only notify every 100
                 if (lastCommentCountWarn !== tenDigit) {
                      speakText(`あと、${remaining}件です`);
                      lastCommentCountWarn = tenDigit;
@@ -1307,4 +1195,4 @@
     }
 </script>
 </body>
-</html>
+    </html>
