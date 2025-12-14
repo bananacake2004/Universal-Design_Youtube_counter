@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (Smart Suggest Ver)</title>
+    <title>耐久カウンター Jewel Ocean (Final Fix v2)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
     <style>
-        /* --- デザイン定義 (変更なし) --- */
+        /* --- デザイン定義 --- */
         :root {
             --bg-grad-1: #a18cd1; --bg-grad-2: #fbc2eb;
             --glass-bg: rgba(255, 255, 255, 0.85); --glass-border: rgba(255, 255, 255, 0.6);
@@ -21,7 +21,7 @@
         body {
             font-family: "Zen Maru Gothic", sans-serif; margin: 0; padding: 20px; color: var(--text-main); min-height: 100vh;
             background-image: linear-gradient(120deg, #89f7fe 0%, #66a6ff 100%);
-            background-attachment: fixed; overflow-x: hidden;
+            background-attachment: fixed; overflow-x: hidden; transition: background 0.3s;
         }
         .bubbles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; pointer-events: none; }
         .bubble { position: absolute; bottom: -100px; background-color: rgba(255, 255, 255, 0.3); border-radius: 50%; animation: rise 15s infinite ease-in; }
@@ -105,9 +105,11 @@
         .btn-eye:hover { opacity: 1; }
 
         .obs-toggle { text-align: right; margin-bottom: 10px; }
-        body.obs-mode { background: transparent; padding: 0; }
-        body.obs-mode .bubbles, body.obs-mode .setting-wrap, body.obs-mode .history-wrap, body.obs-mode .status-bar { display: none; }
-        body.obs-mode .obs-toggle { position: fixed; top: 10px; right: 10px; opacity: 0.2; transition: opacity 0.3s; }
+        
+        /* OBSモードのデザイン定義 */
+        body.obs-mode { background: transparent !important; padding: 0; }
+        body.obs-mode .bubbles, body.obs-mode .setting-wrap, body.obs-mode .history-wrap, body.obs-mode .status-bar { display: none !important; }
+        body.obs-mode .obs-toggle { position: fixed; top: 10px; right: 10px; opacity: 0.2; transition: opacity 0.3s; z-index: 10000; }
         body.obs-mode .obs-toggle:hover { opacity: 1; }
         body.obs-mode .glass-card.score-card { margin: 40px auto 0 auto; border: 6px solid var(--accent-color); background: rgba(255,255,255,0.95); }
         
@@ -217,15 +219,15 @@
         <h3 style="color:var(--text-sub); border-bottom:1px solid #eee; padding-bottom:5px; margin-top:20px;">🛑 終了・リセット条件 (マルチタスク)</h3>
         <div class="condition-box">
             <div class="condition-row">
-                <label class="cond-label"><input type="checkbox" id="cond_goal_viewers"> (1) 同接ゴール停止</label>
+                <label class="cond-label"><input type="checkbox" id="cond_goal_viewers"> (2) 同接ゴール停止</label>
                 <span>：同接が <input type="number" id="val_goal_viewers" value="10000"> 人以上でSTOP</span>
             </div>
             <div class="condition-row">
-                <label class="cond-label"><input type="checkbox" id="cond_goal_subs"> (2) 登録者ゴール停止</label>
+                <label class="cond-label"><input type="checkbox" id="cond_goal_subs"> (3) 登録者ゴール停止</label>
                 <span>：登録者が <input type="number" id="val_goal_subs" value="100000"> 人以上でSTOP</span>
             </div>
             <div class="condition-row">
-                <label class="cond-label"><input type="checkbox" id="cond_limit_comments"> (3) コメント数上限</label>
+                <label class="cond-label"><input type="checkbox" id="cond_limit_comments"> (6) コメント数上限</label>
                 <span>：合計 <input type="number" id="val_limit_comments" value="1000"> 件でSTOP</span>
             </div>
             <hr style="width:100%; border:0; border-top:1px dashed #ccc; margin:10px 0;">
@@ -356,54 +358,60 @@
     const HISTORY_KEY = "yt_endurance_v36_pt_final", QUOTA_KEY_PREFIX = "yt_api_usage_", CHANNEL_MEM_KEY = "yt_channel_speed_mem";
     const NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
     
+    // Global variables
     let isTracking = false;
     let isFinishing = false;
     let lastStatsTime = 0; 
     let lastCommentReceivedTime = 0;
-    
     let currentPollingInterval = 5000; 
     let youtubeSuggestedInterval = 5000; 
     let lastFetchTime = 0;
-    
     let lastManualFirstActionTime = 0; 
     let dousetsuDropStartTime = null; 
     let lastDousetsuCheckSec = null; 
     let checkInterval = null; 
-    
     let hasWarned30SecHatsu = false;
     let hasWarned30SecDousetsu = false;
     let lastCommentCountWarn = null; 
-    
     let sessionData = { startTime: null, startSubCount: 0, currentSubCount: 0, totalComments: 0, manualFirstComments: 0, currentViewers: 0 };
     let videoId = "", channelId = "", liveChatId = null, nextPageToken = null;
     let isDemo = false, isManualSub = true;
-    
     let apiKeys = [];
     let currentKeyIndex = 0;
-    
     let audioCtx = null;
     let globalVolume = 0.5;
-
     let visualState = { totalPoints: 0, subCount: 0, firstCount: 0, totalComments: 0, viewers: 0 };
-    
-    // --- 予測用変数 ---
     let predictedApiCount = 0;
-    let predictionSource = ""; // "history", "subscribers", "known"
+    let predictionSource = "default";
+    let predictionTimeout = null;
+
+    // --- Global Functions (Defined on window) ---
+    window.toggleObs = function() {
+        document.body.classList.toggle('obs-mode');
+        // OBSモード時は背景画像を消す
+        document.body.style.backgroundImage = document.body.classList.contains('obs-mode') ? 'none' : '';
+    };
+
+    window.openModal = function() { document.getElementById('helpModal').style.display = 'flex'; };
+    window.closeModal = function() { document.getElementById('helpModal').style.display = 'none'; };
+    
+    window.toggleApiVisibility = function() {
+        const area = document.getElementById('apiKey');
+        if (area.classList.contains('api-hidden')) area.classList.remove('api-hidden');
+        else area.classList.add('api-hidden');
+    };
 
     window.onload = function() { 
         renderHistory(); 
         checkDstAndDisplayResetTime(); 
-        
-        // 初回ロード時は履歴ベースで予測を実行
-        predictApiCountFromHistory();
+        predictApiCountFromHistory(); // Initial predict
         calculateSafeIntervals(); 
-        
         updateSessionInfo();
         displayApiQuota(); 
         updateVisibility(); 
         requestAnimationFrame(updateVisualsLoop); 
     };
-    
+
     document.getElementById('cond_no_first').addEventListener('change', updateVisibility);
     document.getElementById('cond_low_viewers').addEventListener('change', updateVisibility);
 
@@ -414,191 +422,80 @@
         document.getElementById('timer-dousetsu').classList.toggle('active', useDousetsu);
     }
 
-    // --- 予測ロジック: 履歴ベース ---
-    function predictApiCountFromHistory() {
-        const h = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
-        if (h.length === 0) {
-            predictedApiCount = 2; // デフォルト安全値
-            predictionSource = "default";
-            return;
-        }
-        
-        // 過去の平均CPM(分間コメント数)を計算
-        let maxCpm = 0;
-        h.forEach(rec => {
-            const durationMin = (new Date(rec.endTime) - new Date(rec.startTime)) / 60000;
-            const cpm = rec.totalComments / (durationMin || 1);
-            if (cpm > maxCpm) maxCpm = cpm;
-        });
-
-        if (maxCpm > 1000) predictedApiCount = 4; // かなり激流
-        else if (maxCpm > 200) predictedApiCount = 3; // そこそこ激流
-        else if (maxCpm > 50) predictedApiCount = 2; // 普通
-        else predictedApiCount = 1; // まったり
-        
-        predictionSource = "history";
-    }
-
-    // --- 予測ロジック: URL/チャンネル規模ベース ---
-    let predictionTimeout = null;
-    function predictApiCountFromUrl() {
+    // --- Prediction Logic ---
+    window.predictApiCountFromUrl = function() {
         const url = document.getElementById('url').value;
         const keys = getApiKeys();
-        if (!url || keys.length === 0) {
-            // URLがない、またはキーがないなら履歴ベースに戻す
+        
+        if (!url) {
             predictApiCountFromHistory();
             calculateSafeIntervals();
             return;
         }
 
-        // デバウンス: 入力が止まってから処理
+        // キーがない場合は予測できないので、UIで通知する
+        if (keys.length === 0) {
+            predictionSource = "need_key";
+            calculateSafeIntervals();
+            return;
+        }
+
         if (predictionTimeout) clearTimeout(predictionTimeout);
         predictionTimeout = setTimeout(async () => {
             const vid = extractVideoId(url);
             if (!vid) return;
 
             try {
-                // 1. まず動画情報を取得してChannelIDを得る
-                // 注意: ここで1API消費するが、利便性のため許容
-                const key = keys[0]; // 予測用には最初のキーを使用
+                const key = keys[0];
                 const vRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${vid}&key=${key}`);
                 const vData = await vRes.json();
                 if (!vData.items || vData.items.length === 0) return;
                 
                 const cid = vData.items[0].snippet.channelId;
                 
-                // 2. 過去の記憶(既知のチャンネル)にあるかチェック
                 const mem = JSON.parse(localStorage.getItem(CHANNEL_MEM_KEY) || "{}");
                 if (mem[cid]) {
                     const knownCpm = mem[cid];
-                    if (knownCpm > 1000) predictedApiCount = 5;
-                    else if (knownCpm > 200) predictedApiCount = 3;
-                    else predictedApiCount = 1;
-                    
+                    predictedApiCount = (knownCpm > 1000) ? 5 : (knownCpm > 200) ? 3 : 1;
                     predictionSource = "known";
                     calculateSafeIntervals();
                     return;
                 }
 
-                // 3. チャンネル情報(登録者数)を取得
                 const cRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${cid}&key=${key}`);
                 const cData = await cRes.json();
                 if (!cData.items || cData.items.length === 0) return;
 
                 const subs = parseInt(cData.items[0].statistics.subscriberCount);
-                
-                // 登録者数による推測
-                if (subs >= 1000000) predictedApiCount = 5;      // 100万人超: 激流警戒
-                else if (subs >= 500000) predictedApiCount = 3; // 50万人超: やや多め
-                else if (subs >= 100000) predictedApiCount = 2; // 10万人超: 普通
-                else predictedApiCount = 1;                     // それ以下: 1つで十分
+                if (subs >= 1000000) predictedApiCount = 5;
+                else if (subs >= 500000) predictedApiCount = 3;
+                else if (subs >= 100000) predictedApiCount = 2;
+                else predictedApiCount = 1;
                 
                 predictionSource = "subscribers";
                 calculateSafeIntervals();
+            } catch (e) { console.log("Prediction error", e); }
+        }, 1000);
+    };
 
-            } catch (e) {
-                console.log("Prediction failed:", e);
-                // 失敗したら履歴ベースのまま
-            }
-        }, 1000); // 1秒入力が止まったら実行
-    }
-
-    function getPtDateString() {
-        const d = new Date();
-        return d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
-    }
-
-    function getHoursUntilPtMidnight() {
-        const now = new Date();
-        const ptStr = now.toLocaleString("en-US", {timeZone: "America/Los_Angeles"});
-        const ptDate = new Date(ptStr); 
-        const nextMidnight = new Date(ptDate);
-        nextMidnight.setHours(24, 0, 0, 0);
-        const diffMs = nextMidnight - ptDate;
-        return diffMs / (1000 * 60 * 60);
-    }
-
-    function checkDstAndDisplayResetTime() {
-        const now = new Date();
-        const m = now.getMonth();
-        const isDst = (m > 2 && m < 10); 
-        const resetHour = isDst ? 16 : 17;
-        document.getElementById('apiResetTimeDisplay').innerText = `${resetHour}:00`;
-        return resetHour;
-    }
-
-    function getKeyUsage(key) {
-        if(isDemo) return 0;
-        const today = getPtDateString();
-        const record = JSON.parse(localStorage.getItem(QUOTA_KEY_PREFIX + key) || "{}");
-        if (record.date !== today) return 0;
-        return record.count || 0;
-    }
-
-    function addKeyUsage(key, amount) {
-        if(isDemo) return;
-        const today = getPtDateString();
-        let record = JSON.parse(localStorage.getItem(QUOTA_KEY_PREFIX + key) || "{}");
-        if (record.date !== today) { record = { date: today, count: 0 }; }
-        record.count = (record.count || 0) + amount;
-        localStorage.setItem(QUOTA_KEY_PREFIX + key, JSON.stringify(record));
-        displayApiQuota();
-    }
-
-    function getTotalQuotaUsed() {
-        let total = 0;
-        getApiKeys().forEach(key => total += getKeyUsage(key));
-        return total;
-    }
-
-    function checkQuotaSafe() {
-        if(document.getElementById('demoModeCheck').checked) return true;
-        const keys = getApiKeys();
-        if(keys.length === 0) return false;
-        const limit = keys.length * 10000;
-        return getTotalQuotaUsed() < limit;
-    }
-
-    function getApiKeys() {
-        const raw = document.getElementById('apiKey').value;
-        if (!raw) return [];
-        let keys = raw.split(/[\n,\s]+/).filter(k => k.trim().length > 0);
-        return [...new Set(keys)];
-    }
-
-    function getNextApiKey() {
-        if (apiKeys.length === 0) return "";
-        const Z = calculateZ(); 
-        let limitPerKey = 9800; 
-        if (Z > 19) limitPerKey = 8500;
-        else if (Z > 6) limitPerKey = 9000;
-        let attempts = 0;
-        while(attempts < apiKeys.length) {
-            const key = apiKeys[currentKeyIndex];
-            const usage = getKeyUsage(key);
-            if (usage < limitPerKey) {
-                currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
-                return key;
-            }
-            currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
-            attempts++;
+    function predictApiCountFromHistory() {
+        const h = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+        if (h.length === 0) {
+            predictedApiCount = 2; 
+            predictionSource = "default";
+            return;
         }
-        throw new Error("全APIキーの配給上限(Quota)に達しました");
+        let maxCpm = 0;
+        h.forEach(rec => {
+            const durationMin = (new Date(rec.endTime) - new Date(rec.startTime)) / 60000;
+            const cpm = rec.totalComments / (durationMin || 1);
+            if (cpm > maxCpm) maxCpm = cpm;
+        });
+        predictedApiCount = (maxCpm > 1000) ? 4 : (maxCpm > 200) ? 3 : (maxCpm > 50) ? 2 : 1;
+        predictionSource = "history";
     }
 
-    function calculateZ() {
-        let h = parseFloat(document.getElementById('targetHours').value) || 12;
-        const hoursToMidnight = getHoursUntilPtMidnight();
-        let Z = h;
-        if (h > hoursToMidnight) {
-            const x = hoursToMidnight;
-            const y = h - hoursToMidnight;
-            Z = Math.max(x, y);
-        }
-        return Z;
-    }
-
-    function calculateSafeIntervals() {
+    window.calculateSafeIntervals = function() {
         const keys = getApiKeys();
         const keyCount = keys.length > 0 ? keys.length : 1;
         
@@ -618,12 +515,13 @@
         
         if (isAuto) {
              inputEl.style.display = 'none';
-             
-             // --- メッセージ生成ロジック ---
              let msg = "";
-             if (predictionSource === "known") {
+             if (predictionSource === "need_key") {
+                 msg = "ℹ️ APIキーを入力すると、チャンネルの規模（登録者数）から必要数を計算します";
+                 displayEl.style.color = "#0984e3";
+             } else if (predictionSource === "known") {
                  msg = `📈 過去の計測データから、\nキー ${predictedApiCount}個 の使用を推奨します。`;
-                 displayEl.style.color = "#e84393"; // 強調色
+                 displayEl.style.color = "#e84393"; 
              } else if (predictionSource === "subscribers") {
                  msg = `📊 チャンネル規模から予測して、\nキー ${predictedApiCount}個 あれば安心です。`;
                  displayEl.style.color = "#6c5ce7";
@@ -635,14 +533,11 @@
                  displayEl.style.color = "#636e72";
              }
              
-             // APIキーが足りているかチェック
-             if (keys.length < predictedApiCount && !document.getElementById('demoModeCheck').checked) {
+             if (keys.length < predictedApiCount && !document.getElementById('demoModeCheck').checked && predictionSource !== "need_key") {
                  msg += `\n⚠️ 現在${keys.length}個 (不足の可能性あり)`;
                  displayEl.style.color = "#d63031";
              }
-             
              displayEl.innerText = msg;
-
         } else {
              inputEl.style.display = 'inline-block';
              inputEl.value = recInterval.toFixed(1);
@@ -650,10 +545,97 @@
              displayEl.innerText = `固定設定: ${recInterval.toFixed(1)}s (1日上限: ${totalBudget}pt)`;
              displayEl.style.color = "#00b894"; 
         }
-        
+        displayApiQuota();
+    };
+
+    // --- Utils ---
+    function getApiKeys() {
+        const raw = document.getElementById('apiKey').value;
+        if (!raw) return [];
+        let keys = raw.split(/[\n,\s]+/).filter(k => k.trim().length > 0);
+        return [...new Set(keys)];
+    }
+    
+    function extractVideoId(u){ const m=u.match(/^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/); return (m&&m[7].length==11)?m[7]:false; }
+
+    function getPtDateString() {
+        const d = new Date();
+        return d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+    }
+    function getHoursUntilPtMidnight() {
+        const now = new Date();
+        const ptStr = now.toLocaleString("en-US", {timeZone: "America/Los_Angeles"});
+        const ptDate = new Date(ptStr); 
+        const nextMidnight = new Date(ptDate);
+        nextMidnight.setHours(24, 0, 0, 0);
+        return (nextMidnight - ptDate) / (1000 * 60 * 60);
+    }
+    function checkDstAndDisplayResetTime() {
+        const now = new Date();
+        const m = now.getMonth();
+        const isDst = (m > 2 && m < 10); 
+        const resetHour = isDst ? 16 : 17;
+        document.getElementById('apiResetTimeDisplay').innerText = `${resetHour}:00`;
+        return resetHour;
+    }
+    function getKeyUsage(key) {
+        if(isDemo) return 0;
+        const today = getPtDateString();
+        const record = JSON.parse(localStorage.getItem(QUOTA_KEY_PREFIX + key) || "{}");
+        if (record.date !== today) return 0;
+        return record.count || 0;
+    }
+    function addKeyUsage(key, amount) {
+        if(isDemo) return;
+        const today = getPtDateString();
+        let record = JSON.parse(localStorage.getItem(QUOTA_KEY_PREFIX + key) || "{}");
+        if (record.date !== today) { record = { date: today, count: 0 }; }
+        record.count = (record.count || 0) + amount;
+        localStorage.setItem(QUOTA_KEY_PREFIX + key, JSON.stringify(record));
         displayApiQuota();
     }
-
+    function getTotalQuotaUsed() {
+        let total = 0;
+        getApiKeys().forEach(key => total += getKeyUsage(key));
+        return total;
+    }
+    function checkQuotaSafe() {
+        if(document.getElementById('demoModeCheck').checked) return true;
+        const keys = getApiKeys();
+        if(keys.length === 0) return false;
+        const limit = keys.length * 10000;
+        return getTotalQuotaUsed() < limit;
+    }
+    function getNextApiKey() {
+        if (apiKeys.length === 0) return "";
+        const Z = calculateZ(); 
+        let limitPerKey = 9800; 
+        if (Z > 19) limitPerKey = 8500;
+        else if (Z > 6) limitPerKey = 9000;
+        let attempts = 0;
+        while(attempts < apiKeys.length) {
+            const key = apiKeys[currentKeyIndex];
+            const usage = getKeyUsage(key);
+            if (usage < limitPerKey) {
+                currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+                return key;
+            }
+            currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+            attempts++;
+        }
+        throw new Error("全APIキーの配給上限(Quota)に達しました");
+    }
+    function calculateZ() {
+        let h = parseFloat(document.getElementById('targetHours').value) || 12;
+        const hoursToMidnight = getHoursUntilPtMidnight();
+        let Z = h;
+        if (h > hoursToMidnight) {
+            const x = hoursToMidnight;
+            const y = h - hoursToMidnight;
+            Z = Math.max(x, y);
+        }
+        return Z;
+    }
     function displayApiQuota() {
         const total = getTotalQuotaUsed();
         const keys = getApiKeys();
@@ -666,68 +648,9 @@
         else if(pct > 70) bar.style.background = "#fdcb6e"; 
         else bar.style.background = "#00b894"; 
     }
-
-    function initAudio() {
-        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if(audioCtx.state === 'suspended') audioCtx.resume();
-    }
-    const volSlider = document.getElementById('volumeSlider');
-    const volDisplay = document.getElementById('volValue');
-    volSlider.addEventListener('input', (e) => {
-        globalVolume = parseFloat(e.target.value);
-        volDisplay.innerText = Math.round(globalVolume * 100) + "%";
-    });
-    function playVolumeTest() {
-        initAudio();
-        speakText("この音量でいいですか？");
-        setTimeout(playBeepSound, 2000);
-    }
     
-    function speakText(text) {
-        if (!document.getElementById('soundEnabled').checked) return;
-        const msg = new SpeechSynthesisUtterance(text);
-        msg.lang = "ja-JP";
-        msg.volume = Math.min(globalVolume, 1.0);
-        msg.rate = 1.1; 
-        window.speechSynthesis.speak(msg);
-    }
-    
-    function playBeepSound() {
-        if (!document.getElementById('soundEnabled').checked) return;
-        initAudio();
-        const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = "sine"; osc.frequency.setValueAtTime(880, now); osc.frequency.setValueAtTime(0, now + 0.1); osc.frequency.setValueAtTime(880, now + 0.15); 
-        const beepVol = globalVolume * 0.1; 
-        gain.gain.setValueAtTime(beepVol, now); gain.gain.linearRampToValueAtTime(0, now + 0.3);
-        osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now + 0.3);
-    }
-
-    function toggleObs() {
-        document.body.classList.toggle('obs-mode');
-        document.body.style.backgroundImage = document.body.classList.contains('obs-mode') ? 'none' : '';
-    }
-    function openModal() { document.getElementById('helpModal').style.display = 'flex'; }
-    function closeModal() { document.getElementById('helpModal').style.display = 'none'; }
-    function setStatus(msg, type) {
-        const bar = document.getElementById('statusBox'); bar.innerText = msg; bar.className = 'status-bar';
-        if(type==='active') bar.classList.add('status-ok');
-        if(type==='warning') bar.classList.add('status-warn');
-        if(type==='demo') bar.classList.add('status-demo');
-        if(type==='grace') bar.classList.add('status-grace');
-    }
-
-    function toggleApiVisibility() {
-        const area = document.getElementById('apiKey');
-        if (area.classList.contains('api-hidden')) {
-            area.classList.remove('api-hidden');
-        } else {
-            area.classList.add('api-hidden');
-        }
-    }
-
-    async function previewVideo() {
+    // --- Main Logic ---
+    window.previewVideo = async function() {
         if(document.getElementById('demoModeCheck').checked) { alert("デモモード中は動画確認は不要です"); return; }
         apiKeys = getApiKeys();
         if (apiKeys.length === 0) { alert("APIキーを入力してください"); return; }
@@ -741,7 +664,6 @@
             document.getElementById('vcChannel').innerText = d.snippet.channelTitle;
             document.getElementById('videoCard').style.display = "flex";
             
-            // プレビュー時も既知チャンネルなら警告
             const mem = JSON.parse(localStorage.getItem(CHANNEL_MEM_KEY) || "{}");
             if(mem[d.snippet.channelId]) {
                 const maxCpm = mem[d.snippet.channelId];
@@ -750,21 +672,18 @@
                     document.getElementById('autoSpeedCheck').checked = true;
                 }
             }
-
         } catch (e) { alert("エラー: " + e.message); }
-    }
+    };
 
-    async function startTracking() {
+    window.startTracking = async function() {
         if (isTracking) return;
         apiKeys = getApiKeys();
         if(!document.getElementById('demoModeCheck').checked && apiKeys.length === 0) {
             alert("APIキーを入力してください"); return;
         }
-        
         if (!checkQuotaSafe()) {
             alert("本日のAPI使用上限に達しているため開始できません。\n(キーを追加するか、太平洋時間 0時 までお待ちください)"); return;
         }
-        
         initAudio(); 
         isDemo = document.getElementById('demoModeCheck').checked;
         isManualSub = document.getElementById('manualSubCheck').checked;
@@ -787,12 +706,10 @@
             hasWarned30SecDousetsu = false;
             lastCommentCountWarn = null;
             lastDousetsuCheckSec = null;
-            
             lastStatsTime = Date.now(); 
             lastCommentReceivedTime = Date.now(); 
             currentPollingInterval = parseFloat(document.getElementById('minIntervalSeconds').value) * 1000;
             if(isNaN(currentPollingInterval) || currentPollingInterval < 500) currentPollingInterval = 5000;
-            
             lastFetchTime = Date.now(); 
             
             if(!isDemo && channelId) {
@@ -802,23 +719,19 @@
                     setStatus("🚀 過去の激流データを検知。高速モードで開始します。", "active");
                 }
             }
-            
             visualState.subCount = sessionData.currentSubCount;
             visualState.firstCount = sessionData.manualFirstComments;
             visualState.totalComments = sessionData.totalComments;
             visualState.viewers = sessionData.currentViewers;
             visualState.totalPoints = calculatePoints();
-
             updateSessionInfo(); 
             runApiLoop();
-            
             if(checkInterval) clearInterval(checkInterval);
             checkInterval = setInterval(checkConditionsAndTimer, 200); 
-
         } catch (e) { alert("開始エラー: " + e.message); }
-    }
-
-    function stopTrackingManual() { if(isTracking) finishSession("手動STOP"); }
+    };
+    
+    window.stopTrackingManual = function() { if(isTracking) finishSession("手動STOP"); };
 
     async function initSession() {
         if(isDemo) {
@@ -840,12 +753,11 @@
         sessionData = { startTime: new Date(), startSubCount: initialSub, currentSubCount: initialSub, totalComments: 0, manualFirstComments: 0, currentViewers: parseInt(v.liveStreamingDetails.concurrentViewers||0) };
         nextPageToken=null;
     }
-
+    
     async function runApiLoop() {
         if (!isTracking) return;
         const now = Date.now();
         let itemCount = 0;
-
         try {
             if(isDemo) { 
                 await demoSimulate(); 
@@ -856,14 +768,12 @@
                 if (Date.now()-lastCommentReceivedTime >= NO_COMMENT_LIMIT_MS) { finishSession("コメント停止(30分)"); return; }
                 if (now - lastStatsTime >= 60000) { await updateStatsSingle(); }
             }
-            
             if(document.getElementById('autoSpeedCheck').checked) {
                 const BATCH_TARGET = 1800; 
                 const DANGER_ZONE = 1950;  
                 const timeDiff = now - lastFetchTime; 
                 lastFetchTime = now;
                 const rate = (itemCount / (timeDiff || 1)) || 0.0001; 
-                
                 if (itemCount >= DANGER_ZONE) {
                     currentPollingInterval = 500; 
                     setStatus(`🔥 急加速! (${itemCount}コメ)`, "warn");
@@ -885,19 +795,14 @@
                 currentPollingInterval = Math.max(currentPollingInterval, 5000); 
                 setStatus(`🛑 固定モード (${(currentPollingInterval/1000).toFixed(1)}s)`, "active");
             }
-
             setTimeout(runApiLoop, currentPollingInterval);
-
         } catch (e) { 
             console.error(e);
-            if (e.message.includes("403") || e.message.includes("429")) {
-                finishSession(`強制停止: ${e.message}`);
-                return;
-            }
+            if (e.message.includes("403") || e.message.includes("429")) { finishSession(`強制停止: ${e.message}`); return; }
             setTimeout(runApiLoop, 10000); 
         }
     }
-
+    
     async function updateStatsSingle() {
         if(!isTracking && !isDemo) return; 
         try {
@@ -914,7 +819,7 @@
             lastStatsTime = Date.now();
         } catch(e) { console.error("Stats update failed:", e); }
     }
-
+    
     function updateVisualsLoop() {
         if(isTracking) {
             const targetPoints = calculatePoints();
@@ -923,7 +828,6 @@
             visualState.totalComments = lerp(visualState.totalComments, sessionData.totalComments, 0.05);
             visualState.viewers = lerp(visualState.viewers, sessionData.currentViewers, 0.05);
             visualState.firstCount = sessionData.manualFirstComments; 
-
             const subDiff = Math.max(0, Math.round(visualState.subCount) - sessionData.startSubCount);
             document.getElementById('dispSubsVal').innerText = Math.round(visualState.subCount).toLocaleString();
             document.getElementById('dispSubsInc').innerText = `(+${subDiff})`;
@@ -934,13 +838,12 @@
         }
         requestAnimationFrame(updateVisualsLoop);
     }
-    
     function lerp(start, end, factor) {
         let diff = end - start;
         if (Math.abs(diff) < 0.5) return end;
         return start + (diff * factor);
     }
-
+    
     function checkConditionsAndTimer() {
         if(!isTracking) return; 
         const now = Date.now();
@@ -949,7 +852,6 @@
         const useLimitComments = document.getElementById('cond_limit_comments').checked;
         const useHatsu = document.getElementById('cond_no_first').checked;
         const useDousetsu = document.getElementById('cond_low_viewers').checked;
-
         let danger = false;
         if(useGoalViewers) {
             const goalV = parseInt(document.getElementById('val_goal_viewers').value);
@@ -969,10 +871,7 @@
             if (remaining <= 0) { finishSession(`終了：コメント数上限達成 (${limitC}件)`); return; }
             if (remaining <= 100) {
                 const tenDigit = Math.floor(remaining / 10);
-                if (lastCommentCountWarn !== tenDigit) {
-                      speakText(`あと、${remaining}件です`);
-                      lastCommentCountWarn = tenDigit;
-                }
+                if (lastCommentCountWarn !== tenDigit) { speakText(`あと、${remaining}件です`); lastCommentCountWarn = tenDigit; }
             }
             if (remaining <= 20) danger = true;
         }
@@ -1025,47 +924,27 @@
             scoreEl.classList.remove('danger-text', 'blink-anim');
         }
     }
-
-    function updateTimerUI(type, seconds) {
-        const timeEl = document.getElementById(`${type}-time`);
-        const msgEl = document.getElementById(`${type}-msg`);
-        const absSeconds = Math.abs(seconds);
-        const m = Math.floor(absSeconds / 60).toString().padStart(2, '0');
-        const s = Math.floor(absSeconds % 60).toString().padStart(2, '0');
-        const sign = seconds < 0 ? "-" : "";
-        timeEl.innerText = `${sign}${m}:${s}`;
-
-        if (seconds < 30) {
-            timeEl.classList.add('danger-text', 'blink-anim');
-            if (!msgEl.classList.contains('pop-msg')) {
-                if (seconds < 0) msgEl.innerText = "終了まであと少し...";
-                else msgEl.innerText = "粘って！！";
-            }
-        } else {
-            timeEl.classList.remove('danger-text', 'blink-anim');
-            if (!msgEl.classList.contains('pop-msg')) {
-                msgEl.innerText = (type === 'hatsu') ? "コメント待ち..." : "維持してね！";
-            }
-        }
-    }
-
+    
     function manualHatsuAction() {
         if(!isTracking) return;
         sessionData.manualFirstComments++; 
         lastManualFirstActionTime = Date.now();
         hasWarned30SecHatsu = false;
         const msgEl = document.getElementById('hatsu-msg');
-        msgEl.innerText = "初コメありがとうございます。"初コメありがとうございます。";
+        msgEl.innerText = "初コメありがとうございます。\nゆっくり見ていってくださいね。";
         msgEl.classList.add('pop-msg');
         setTimeout(() => { msgEl.classList.remove('pop-msg'); }, 5000);
         speakText("はつこめ、ありがとうございます。ゆっくりしていってくださいね。");
     }
+    window.manualHatsuAction = manualHatsuAction;
 
-    function adjustFirst(amount) {
+    window.adjustFirst = function(amount) {
         if(!isTracking) return;
         sessionData.manualFirstComments += amount;
         if (sessionData.manualFirstComments < 0) sessionData.manualFirstComments = 0;
-    }
+    };
+    
+    window.adjustSub = function(amount) { if(!isTracking) return; sessionData.currentSubCount += amount; }; 
 
     async function demoSimulate() {
         const add = Math.floor(Math.random() * 4);
@@ -1080,13 +959,10 @@
         if(!isManualSub && Math.random() > 0.8) sessionData.currentSubCount += 1;
     }
 
-    function adjustSub(amount) { if(!isTracking) return; sessionData.currentSubCount += amount; } 
-
     async function finishSession(reason) {
         if(!isTracking || isFinishing) return; 
         isFinishing = true; 
         if(checkInterval) clearInterval(checkInterval);
-
         if(channelId) {
             let mem = JSON.parse(localStorage.getItem(CHANNEL_MEM_KEY) || "{}");
             const durationMin = (Date.now() - sessionData.startTime) / 60000;
@@ -1094,7 +970,6 @@
             mem[channelId] = Math.max(mem[channelId] || 0, cpm);
             localStorage.setItem(CHANNEL_MEM_KEY, JSON.stringify(mem));
         }
-
         setStatus("📊 最終集計中...", "warning");
         if(!isDemo) {
             try {
@@ -1108,24 +983,20 @@
                 }
             } catch(e) { console.error("最終集計エラー:", e); }
         }
-        
         isTracking = false; 
         document.body.classList.remove('tracking');
         document.getElementById('subManualControls').style.display = 'none';
-        
         visualState.totalPoints = calculatePoints();
         visualState.subCount = sessionData.currentSubCount;
         visualState.totalComments = sessionData.totalComments;
-        
         const pt = calculatePoints();
         const rec = { id: Date.now(), points: pt, startTime: sessionData.startTime.toLocaleString(), endTime: new Date().toLocaleString(), subDiff: Math.max(0, sessionData.currentSubCount - sessionData.startSubCount), firstComments: sessionData.manualFirstComments, totalComments: sessionData.totalComments, reason: reason };
         saveToHistory(rec); setStatus(`終了！結果: ${pt} pt`, "");
-        
         speakText("計測を終了しました。おつかれい！！");
         alert(`おつかれさま！\n理由: ${reason}\n結果: ${pt} pt\n(現在の同接: ${sessionData.currentViewers}人 で集計しました)`); 
         updateSessionInfo();
     }
-
+    
     function calculatePoints() {
         const s = parseInt(document.getElementById('ptSub').value), f = parseInt(document.getElementById('ptFirst').value), c = parseInt(document.getElementById('ptComm').value);
         const diff = Math.max(0, sessionData.currentSubCount - sessionData.startSubCount);
@@ -1158,7 +1029,6 @@
         let m = d.getMinutes().toString().padStart(2, '0');
         let dispH = h.toString().padStart(2, '0');
         document.getElementById('lastCommTime').innerText = `${dispH}:${m}`;
-        
         let count = 0;
         if (data.items && data.items.length > 0) { 
             count = data.items.length;
@@ -1169,8 +1039,7 @@
         if (data.pollingIntervalMillis) youtubeSuggestedInterval = data.pollingIntervalMillis;
         return count;
     }
-
-    function extractVideoId(u){ const m=u.match(/^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/); return (m&&m[7].length==11)?m[7]:false; }
+    
     function validateInputs(){ if(!document.getElementById('apiKey').value && !document.getElementById('demoModeCheck').checked){ alert("APIキーを入力してください"); return false; } if(!document.getElementById('url').value && !document.getElementById('demoModeCheck').checked){ alert("URLを入力してください"); return false; } return true; }
     function updateSessionInfo() {
         let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
@@ -1182,12 +1051,26 @@
         let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); const tb=document.querySelector('#historyTable tbody'); tb.innerHTML="";
         h.slice().reverse().forEach((i,x)=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${h.length-x}</td><td style="font-weight:900;color:#e84393;">${i.points}</td><td>${i.startTime}</td><td>${i.endTime}</td><td>+${i.subDiff}</td><td>${i.firstComments}</td><td>${i.totalComments}</td><td>${i.reason}</td>`; tb.appendChild(tr); });
     }
-    function clearHistory(){ if(confirm("履歴を削除しますか？")){ localStorage.removeItem(HISTORY_KEY); renderHistory(); updateSessionInfo(); } }
-    function downloadCSV(){
+    window.clearHistory = function(){ if(confirm("履歴を削除しますか？")){ localStorage.removeItem(HISTORY_KEY); renderHistory(); updateSessionInfo(); } };
+    window.downloadCSV = function(){
         let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); if(h.length==0)return alert("履歴なし");
         let c="\uFEFF回数,pt,開始,終了,登録増,初コメ,コメ数,理由\n";
         h.forEach((i,x)=>c+=`${x+1},${i.points},${i.startTime},${i.endTime},${i.subDiff},${i.firstComments},${i.totalComments},${i.reason}\n`);
         const l=document.createElement("a"); l.href=URL.createObjectURL(new Blob([c],{type:"text/csv;charset=utf-8;"})); l.download="history.csv"; l.click();
+    };
+    
+    // --- Initial audio setup on click ---
+    document.addEventListener('click', () => {
+         if(!audioCtx) initAudio();
+         else if(audioCtx.state === 'suspended') audioCtx.resume();
+    }, {once:true});
+    
+    function setStatus(msg, type) {
+        const bar = document.getElementById('statusBox'); bar.innerText = msg; bar.className = 'status-bar';
+        if(type==='active') bar.classList.add('status-ok');
+        if(type==='warning') bar.classList.add('status-warn');
+        if(type==='demo') bar.classList.add('status-demo');
+        if(type==='grace') bar.classList.add('status-grace');
     }
 </script>
 </body>
