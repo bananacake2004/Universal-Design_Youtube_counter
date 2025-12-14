@@ -3,490 +3,1245 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (Final Fix 3)</title>
+    <title>耐久カウンター Jewel Ocean (Layout Restored & Fixed2)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
     <style>
-        /* --- デザイン定義 (変更なし) --- */
-        :root { --bg-grad-1: #a18cd1; --glass-bg: rgba(255, 255, 255, 0.85); --text-main: #2d3436; --text-sub: #636e72; --btn-blue: linear-gradient(135deg, #667eea 0%, #764ba2 100%); --btn-red: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%); --accent-color: #6c5ce7; }
-        body { font-family: "Zen Maru Gothic", sans-serif; margin: 0; padding: 20px; color: var(--text-main); min-height: 100vh; background-image: linear-gradient(120deg, #89f7fe 0%, #66a6ff 100%); background-attachment: fixed; }
-        .bubbles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+        /* --- デザイン定義 --- */
+        :root {
+            --bg-grad-1: #a18cd1; --bg-grad-2: #fbc2eb;
+            --glass-bg: rgba(255, 255, 255, 0.85); --glass-border: rgba(255, 255, 255, 0.6);
+            --text-main: #2d3436; --text-sub: #636e72;
+            --btn-blue: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --btn-red: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+            --accent-color: #6c5ce7;
+            --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        }
+        body {
+            font-family: "Zen Maru Gothic", sans-serif; margin: 0; padding: 20px; color: var(--text-main); min-height: 100vh;
+            background-image: linear-gradient(120deg, #89f7fe 0%, #66a6ff 100%);
+            background-attachment: fixed; overflow-x: hidden; transition: background 0.3s;
+        }
+        .bubbles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; pointer-events: none; }
         .bubble { position: absolute; bottom: -100px; background-color: rgba(255, 255, 255, 0.3); border-radius: 50%; animation: rise 15s infinite ease-in; }
-        .bubble:nth-child(1) { width: 40px; left: 10%; animation-duration: 8s; } .bubble:nth-child(2) { width: 20px; left: 20%; animation-delay: 1s; } .bubble:nth-child(3) { width: 50px; left: 35%; animation-delay: 2s; }
-        @keyframes rise { 0% { bottom: -100px; transform: translateX(0); } 100% { bottom: 1080px; transform: translateX(-200px); } }
+        .bubble:nth-child(1) { width: 40px; height: 40px; left: 10%; animation-duration: 8s; }
+        .bubble:nth-child(2) { width: 20px; height: 20px; left: 20%; animation-duration: 5s; animation-delay: 1s; }
+        .bubble:nth-child(3) { width: 50px; height: 50px; left: 35%; animation-duration: 10s; animation-delay: 2s; }
+        @keyframes rise { 0% { bottom: -100px; transform: translateX(0); } 50% { transform: translateX(100px); } 100% { bottom: 1080px; transform: translateX(-200px); } }
+
         .container { max-width: 950px; margin: 0 auto; position: relative; z-index: 1; }
-        .glass-card { background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 24px; border: 1px solid rgba(255,255,255,0.6); padding: 32px; margin-bottom: 24px; box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15); }
-        h2 { font-size: 1.6rem; margin: 0 0 20px 0; color: var(--accent-color); border-bottom: 2px dashed rgba(108, 92, 231, 0.2); padding-bottom: 10px; }
+        .glass-card { background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 24px; border: 1px solid var(--glass-border); box-shadow: var(--shadow-glass); padding: 32px; margin-bottom: 24px; transition: transform 0.3s ease; }
+        h2 { font-size: 1.6rem; margin-top: 0; margin-bottom: 20px; color: var(--accent-color); display: flex; align-items: center; gap: 10px; border-bottom: 2px dashed rgba(108, 92, 231, 0.2); padding-bottom: 10px; }
+        
         .setting-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
         @media (max-width: 700px) { .setting-grid { grid-template-columns: 1fr; } }
-        .input-group { margin-bottom: 20px; } .input-group label { display: block; font-weight: bold; margin-bottom: 8px; }
-        .input-group input, .input-group textarea { width: 100%; padding: 14px; border: 2px solid #dfe6e9; border-radius: 16px; font-size: 1rem; box-sizing: border-box; font-family: inherit; }
+        .input-group { margin-bottom: 20px; position: relative; }
+        .input-group label { display: block; font-weight: 700; font-size: 1.05rem; margin-bottom: 8px; color: var(--text-main); }
+        .input-group input { width: 100%; padding: 16px; font-size: 1.1rem; border: 2px solid #dfe6e9; border-radius: 16px; background: rgba(255,255,255,0.9); transition: 0.3s; font-family: inherit; box-sizing: border-box; }
+        .input-group input:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.2); }
+        .input-group input[readonly] { background-color: #f1f2f6; color: #b2bec3; cursor: not-allowed; border-color: #f1f2f6; }
+        
+        .input-group textarea { width: 100%; padding: 16px; padding-right: 50px; font-size: 0.95rem; border: 2px solid #dfe6e9; border-radius: 16px; background: rgba(255,255,255,0.9); font-family: "Roboot Mono", monospace; box-sizing: border-box; height: 100px; resize: vertical; line-height: 1.4; }
+        .input-group textarea:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.2); }
+        
+        .api-hidden { -webkit-text-security: disc; } 
+        
         .condition-box { background: #fff; border: 2px solid #dfe6e9; border-radius: 16px; padding: 16px; margin-bottom: 20px; }
         .condition-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
-        .score-value { font-size: 7rem; font-weight: 900; line-height: 1; background: linear-gradient(to right, #6c5ce7, #ff7675); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; margin: 10px 0; }
+        .condition-row input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
+        .condition-row input[type="number"] { width: 100px; padding: 8px; border-radius: 8px; border: 1px solid #ccc; font-weight: bold; }
+        .cond-label { font-weight: bold; cursor: pointer; min-width: 180px; }
+
+        .session-badge { display: inline-block; padding: 8px 16px; background: #fff; border-radius: 50px; font-size: 1.1rem; font-weight: bold; color: var(--accent-color); box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 10px; }
+        .score-area { text-align: center; margin: 20px 0; }
+        .score-title { font-size: 1.1rem; color: var(--text-sub); letter-spacing: 2px; font-weight: bold; }
+        .score-value { 
+            font-size: 7rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; 
+            background: linear-gradient(to right, #6c5ce7, #ff7675); 
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+            filter: drop-shadow(0 4px 6px rgba(108, 92, 231, 0.2)); margin-top: 10px; 
+            transition: all 0.3s;
+        }
+
         .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 24px; }
-        .stat-box { background: #fff; border-radius: 20px; padding: 24px; text-align: center; border: 2px solid #f1f2f6; display: flex; flex-direction: column; align-items: center; }
-        .stat-num { font-size: 2.2rem; font-weight: 900; }
+        .stat-box { 
+            background: #fff; border-radius: 20px; padding: 24px; 
+            text-align: center; border: 2px solid #f1f2f6; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03); 
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .stat-num { font-size: 2.2rem; font-weight: 900; color: var(--text-main); line-height: 1.1; }
+        .stat-sub { font-size: 1rem; color: #00b894; font-weight: bold; white-space: nowrap; }
+        .stat-label { 
+            font-size: 0.95rem; color: var(--text-sub); margin-top: 8px; font-weight: bold; 
+            white-space: nowrap; 
+        }
+
         .timer-display-area { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 24px; }
-        .timer-box { background: #fff; border: 4px solid #333; border-radius: 20px; padding: 20px; text-align: center; display: none; }
+        .timer-box { background: #fff; border: 4px solid #333; border-radius: 20px; padding: 20px; text-align: center; box-shadow: 0 8px 20px rgba(0,0,0,0.1); position: relative; transition: all 0.2s ease; display: none; }
         .timer-box.active { display: block; }
-        .timer-time { font-size: 3.5rem; font-weight: 900; color: #333; font-family: monospace; line-height: 1; margin: 10px 0; }
-        .danger-text { color: #e74c3c !important; animation: blink-slow 1.5s infinite; }
-        @keyframes blink-slow { 50% { opacity: 0.4; } }
-        button { border: none; cursor: pointer; font-family: inherit; font-weight: bold; }
-        .btn-start { width: 100%; padding: 24px; font-size: 1.6rem; border-radius: 24px; background: var(--btn-blue); color: white; }
-        .btn-stop { width: 100%; padding: 24px; font-size: 1.6rem; border-radius: 24px; background: var(--btn-red); color: white; display: none; }
-        .btn-obs { background: rgba(255,255,255,0.5); padding: 8px 16px; border-radius: 30px; font-size: 0.9rem; }
+        #timer-hatsu { cursor: pointer; border-color: #e84393; }
+        #timer-hatsu:active { transform: scale(0.98); }
+        #timer-dousetsu { border-color: #0984e3; }
+        .timer-label { font-size: 1.1rem; font-weight: bold; color: #666; margin-bottom: 5px; }
+        .timer-time { font-size: 3.5rem; font-weight: 900; color: #333; font-family: 'Courier New', Courier, monospace; line-height: 1.0; margin: 10px 0; font-variant-numeric: tabular-nums; }
+        .timer-msg { font-size: 0.95rem; font-weight: bold; color: #555; min-height: 2.8em; display: flex; align-items: center; justify-content: center; white-space: pre-wrap; }
+
+        .danger-text { -webkit-text-fill-color: #e74c3c !important; color: #e74c3c !important; }
+        .blink-anim { animation: blink-slow 1.5s infinite ease-in-out; }
+        @keyframes blink-slow { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        .pop-msg { color: #27ae60 !important; animation: pop-up 0.5s ease-out; }
+        @keyframes pop-up { 0% { transform: scale(0.8); opacity: 0; } 60% { transform: scale(1.1); } 100% { transform: scale(1); opacity: 1; } }
+
+        button { border: none; cursor: pointer; font-family: inherit; font-weight: bold; transition: transform 0.2s, box-shadow 0.2s; }
+        button:active { transform: scale(0.96); }
+        .btn-check { width: 100%; padding: 14px; background: #636e72; color: white; border-radius: 12px; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 10px; }
+        .btn-manual { background: linear-gradient(135deg, #74b9ff, #0984e3); color: white; padding: 5px 24px; border-radius: 50px; font-size: 0.9rem; margin-top: 5px; width: auto; min-width: 80px; white-space: nowrap; box-shadow: 0 4px 6px rgba(9, 132, 227, 0.2); }
+        .btn-start { width: 100%; padding: 24px; font-size: 1.6rem; border-radius: 24px; background: var(--btn-blue); color: white; box-shadow: 0 10px 25px rgba(108, 92, 231, 0.4); border: 2px solid rgba(255,255,255,0.2); }
+        .btn-stop { width: 100%; padding: 24px; font-size: 1.6rem; border-radius: 24px; background: var(--btn-red); color: white; box-shadow: 0 10px 25px rgba(255, 118, 117, 0.4); display: none; border: 2px solid rgba(255,255,255,0.2); }
+        .btn-obs { background: rgba(255,255,255,0.5); padding: 8px 16px; border-radius: 30px; color: var(--text-main); font-size: 0.9rem; display: inline-flex; align-items: center; gap: 5px; z-index: 9999; }
+        .btn-eye { position: absolute; right: 10px; top: 42px; background: transparent; border: none; font-size: 1.2rem; cursor: pointer; opacity: 0.6; }
+        .btn-eye:hover { opacity: 1; }
+
         .obs-toggle { text-align: right; margin-bottom: 10px; }
+        
+        /* OBSモードのデザイン定義 */
         body.obs-mode { background: transparent !important; padding: 0; }
         body.obs-mode .bubbles, body.obs-mode .setting-wrap, body.obs-mode .history-wrap, body.obs-mode .status-bar { display: none !important; }
+        body.obs-mode .obs-toggle { position: fixed; top: 10px; right: 10px; opacity: 0.2; transition: opacity 0.3s; z-index: 10000; }
+        body.obs-mode .obs-toggle:hover { opacity: 1; }
         body.obs-mode .glass-card.score-card { margin: 40px auto 0 auto; border: 6px solid var(--accent-color); background: rgba(255,255,255,0.95); }
-        .status-bar { padding: 16px; background: #fff; border-radius: 16px; text-align: center; font-weight: bold; margin-bottom: 20px; }
-        .status-ok { color: #00b894; background: #edfbf7; border: 2px solid #00b894; }
-        .status-warn { color: #d63031; background: #fdeaea; border: 2px solid #d63031; }
-        .btn-adj { width:32px; height:32px; border-radius:50%; border:none; color:white; font-weight:bold; cursor:pointer; margin:0 5px; }
-        .api-hidden { -webkit-text-security: disc; }
         
-        /* モーダル */
+        .status-bar { padding: 16px; background: #fff; border-radius: 16px; text-align: center; font-weight: bold; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .status-ok { color: #00b894; border: 2px solid #00b894; background: #edfbf7; }
+        .status-warn { color: #d63031; border: 2px solid #d63031; background: #fdeaea; }
+        .status-demo { color: #e17055; border: 2px solid #e17055; background: #fff3e0; }
+        .status-grace { color: #0984e3; border: 2px solid #0984e3; background: #e3f2fd; }
+
+        .video-card { display: none; background: #fff; border-radius: 16px; padding: 12px; gap: 15px; align-items: center; margin-bottom: 20px; border: 2px solid #dfe6e9; }
+        .video-card img { width: 100px; height: 56px; object-fit: cover; border-radius: 8px; }
+        
+        .table-wrap { overflow-x: auto; border-radius: 16px; border: 2px solid #f1f2f6; }
+        table { width: 100%; border-collapse: collapse; min-width: 600px; background: #fff; }
+        th { background: #dfe6e9; text-align: center; }
+        th, td { padding: 12px; border-bottom: 1px solid #f1f2f6; text-align: right; }
+        
+        .btn-adj { width:32px; height:32px; border-radius:50%; border:none; color:white; font-weight:bold; cursor:pointer; margin:0 6px; font-size:1rem; display:inline-flex; justify-content:center; align-items:center; }
+        .btn-plus { background:#00b894; box-shadow: 0 4px 8px rgba(0,184,148,0.3); }
+        .btn-minus { background:#d63031; box-shadow: 0 4px 8px rgba(214,48,49,0.3); }
+        
+        .sound-setting { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 15px; margin-top: 15px; padding-top:15px; border-top: 1px dashed #ccc; }
+        .volume-control { display: flex; align-items: center; gap: 8px; }
+        .btn-test { background: #b2bec3; padding: 6px 12px; font-size: 0.85rem; border-radius: 20px; color: white; border: none; cursor: pointer; }
+        input[type=range] { width: 150px; cursor: pointer; }
+
+        .api-meter { background: #fff; padding: 8px 16px; border-radius: 50px; border: 2px solid #dfe6e9; font-weight: bold; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 8px; color: var(--text-sub); }
+        .api-bar-bg { width: 100px; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
+        .api-bar-fill { height: 100%; background: #00b894; width: 0%; transition: width 0.3s; }
+        
+        body.tracking .setting-wrap { opacity: 0.5; pointer-events: none; filter: grayscale(0.8); transition: 0.5s; }
+        body.tracking .btn-start { display: none; }
+        body.tracking .btn-stop { display: block; }
+
         .modal-ol { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:center; backdrop-filter:blur(5px); }
-        .modal-in { background:#fff; width:90%; max-width:600px; padding:30px; border-radius:24px; max-height:85vh; overflow-y:auto; }
+        .modal-in { background:#fff; width:90%; max-width:600px; padding:30px; border-radius:24px; max-height:85vh; overflow-y:auto; box-shadow:0 20px 50px rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
 
-<div class="bubbles"><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div></div>
+<div class="bubbles"><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div></div>
 
 <div class="container">
     <div class="obs-toggle">
-        <button class="btn-obs" onclick="toggleObs()">✨ OBSモード切替</button>
+        <button class="btn-obs" onclick="toggleObs()">✨ OBSモード切替 (背景透過)</button>
     </div>
 
-    <div id="statusBox" class="status-bar" style="color:#636e72;">👋 準備OK！設定を入力してね</div>
+    <div id="statusBox" class="status-bar" style="color:#636e72;">
+        👋 準備OK！設定を入力してね
+    </div>
 
     <div class="glass-card setting-wrap">
-        <h2>⚙️ 配信設定</h2>
-        <div style="display:flex; gap:12px; margin-bottom:20px;">
-            <div class="input-group" style="flex:1;"><label><input type="checkbox" id="demoModeCheck" onchange="checkInputs()"> 🧪 デモモード</label></div>
-            <div class="input-group" style="flex:1;"><label><input type="checkbox" id="manualSubCheck" checked> 👤 登録者手動</label></div>
-        </div>
-
-        <div class="setting-grid">
-            <div>
-                <div class="input-group"><label>⏱️ 目標時間(h)</label><input type="number" id="targetHours" value="12" onchange="calculateSafeIntervals()"></div>
-                <div class="input-group"><label>更新間隔(s)</label><input type="number" id="minIntervalSeconds" value="5" readonly><div id="chatIntervalDisplay" style="font-size:0.8rem;"></div></div>
-            </div>
-            <div>
-                <div class="input-group"><label>YouTube URL</label><input type="text" id="url" oninput="checkInputs(); predictApiCountFromUrl();"></div>
-                <div class="input-group"><label>APIキー</label><textarea id="apiKey" class="api-hidden" oninput="checkInputs()"></textarea></div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 20px;">
+            <h2 style="margin:0; border:none;">⚙️ 配信設定</h2>
+            <div class="api-meter">
+                <span>API消費(PT):</span>
+                <div class="api-bar-bg"><div id="apiBar" class="api-bar-fill"></div></div>
+                <span id="apiQuotaDisplay">0 / 10000</span>
             </div>
         </div>
         
-        <h3 style="margin-top:20px; border-bottom:1px solid #eee;">🛑 終了・リセット条件</h3>
-        <div class="condition-box">
-            <div class="condition-row"><label><input type="checkbox" id="cond_goal_viewers"> 同接ゴール</label> <input type="number" id="val_goal_viewers" value="10000" style="width:80px"> 人</div>
-            <div class="condition-row"><label><input type="checkbox" id="cond_goal_subs"> 登録者ゴール</label> <input type="number" id="val_goal_subs" value="100000" style="width:80px"> 人</div>
-            <div class="condition-row"><label><input type="checkbox" id="cond_limit_comments"> コメ数上限</label> <input type="number" id="val_limit_comments" value="1000" style="width:80px"> 件</div>
-            <hr>
-            <div class="condition-row"><label style="color:#e84393;"><input type="checkbox" id="cond_no_first" checked> 初コメ耐久</label> <input type="number" id="val_no_first_min" value="2" step="0.1" style="width:60px"> 分タイマー</div>
-            <div class="condition-row"><label style="color:#0984e3;"><input type="checkbox" id="cond_low_viewers" checked> 同接維持</label> <input type="number" id="resetViewerThreshold" value="10" style="width:60px"> 人以下 <input type="number" id="resetDurationMinutes" value="5" step="0.1" style="width:60px"> 分</div>
+        <div style="display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap;">
+            <div class="input-group" style="flex:1; background:#fff3e0; padding:12px; border-radius:16px; border:1px solid #ffeaa7; margin-bottom:0; min-width:200px;">
+                <label style="margin-bottom:0; cursor:pointer; font-size:0.95rem;">
+                    <input type="checkbox" id="demoModeCheck" style="width:18px; height:18px; vertical-align:middle;" onchange="checkInputs()">
+                    <span style="vertical-align:middle; color:#d35400;">🧪 <b>デモモード</b> (API消費なし)</span>
+                </label>
+            </div>
+            <div class="input-group" style="flex:1; background:#e3f2fd; padding:12px; border-radius:16px; border:1px solid #bbdefb; margin-bottom:0; min-width:200px;">
+                <label style="margin-bottom:0; cursor:pointer; font-size:0.95rem;">
+                    <input type="checkbox" id="manualSubCheck" checked style="width:18px; height:18px; vertical-align:middle;">
+                    <span style="vertical-align:middle; color:#0d47a1;">👤 <b>登録者数 手動モード</b> (推奨)</span>
+                </label>
+            </div>
         </div>
 
         <div class="setting-grid">
-            <div class="input-group"><label>登録者1人(pt)</label><input type="number" id="ptSub" value="100"></div>
-            <div class="input-group"><label>初コメ1件(pt)</label><input type="number" id="ptFirst" value="50"></div>
-            <div class="input-group"><label>コメ1件(pt)</label><input type="number" id="ptComm" value="1"></div>
+            <div>
+                <div class="input-group">
+                    <label>⏱️ 目標時間 (時間)</label>
+                    <input type="number" id="targetHours" value="12" min="1" step="0.5" oninput="calculateSafeIntervals()" onkeyup="calculateSafeIntervals()" onchange="calculateSafeIntervals()">
+                </div>
+                <div class="input-group">
+                    <label>🛡️ 更新間隔 (Auto)</label>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <input type="number" id="minIntervalSeconds" value="5" step="0.1" min="0.1" readonly style="width:80px;">
+                        <label style="font-size:0.85rem; cursor:pointer; color:#6c5ce7; font-weight:bold;">
+                            <input type="checkbox" id="autoSpeedCheck" checked onchange="calculateSafeIntervals()"> ⚡ AI自動変速
+                        </label>
+                    </div>
+                    <div id="chatIntervalDisplay" style="font-size:0.8rem; color:#636e72; margin-top:5px; white-space: pre-wrap;"></div>
+                </div>
+            </div>
+            <div>
+                <div class="input-group">
+                    <label>📺 YouTube URL</label>
+                    <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=..." oninput="checkInputs(); predictApiCountFromUrl();">
+                </div>
+                <div class="input-group">
+                    <label>🔑 APIキー (複数可)</label>
+                    <textarea id="apiKey" placeholder="AIzaSy...&#13;&#10;AIzaSy...&#13;&#10;(STARTで非表示になります)" oninput="checkInputs(); calculateSafeIntervals()"></textarea>
+                    <button class="btn-eye" onclick="toggleApiVisibility()" title="表示/非表示">👁️</button>
+                </div>
+            </div>
+        </div>
+        
+        <h3 style="color:var(--text-sub); border-bottom:1px solid #eee; padding-bottom:5px; margin-top:20px;">🛑 終了・リセット条件 (マルチタスク)</h3>
+        <div class="condition-box">
+            <div class="condition-row">
+                <label class="cond-label"><input type="checkbox" id="cond_goal_viewers"> (1) 同接ゴール停止</label>
+                <span>：同接が <input type="number" id="val_goal_viewers" value="10000"> 人以上でSTOP</span>
+            </div>
+            <div class="condition-row">
+                <label class="cond-label"><input type="checkbox" id="cond_goal_subs"> (2) 登録者ゴール停止</label>
+                <span>：登録者が <input type="number" id="val_goal_subs" value="100000"> 人以上でSTOP</span>
+            </div>
+            <div class="condition-row">
+                <label class="cond-label"><input type="checkbox" id="cond_limit_comments"> (3) コメント数上限</label>
+                <span>：合計 <input type="number" id="val_limit_comments" value="1000"> 件でSTOP</span>
+            </div>
+            
+            <hr style="width:100%; border:0; border-top:1px dashed #ccc; margin:10px 0;">
+            
+            <div class="condition-row">
+                <label class="cond-label" style="color:#e84393;"><input type="checkbox" id="cond_no_first" checked> (4) 初コメ耐久タイマー</label>
+                <span>：<input type="number" id="val_no_first_min" value="2" step="0.1" style="width:50px"> 分間、初コメがないと終了</span>
+            </div>
+            <div class="condition-row">
+                <label class="cond-label" style="color:#0984e3;"><input type="checkbox" id="cond_low_viewers" checked> (5) 同接維持タイマー</label>
+                <span>：同接 <input type="number" id="resetViewerThreshold" value="10" style="width:50px"> 人以下が <input type="number" id="resetDurationMinutes" value="5" step="0.1" style="width:50px"> 分続くと終了</span>
+            </div>
+            <div style="font-size:0.85rem; color:#636e72; margin-top:5px;">※チェックした項目のうち、どれか一つでも条件を満たすと終了します。タイマーは -10秒 で終了。</div>
         </div>
 
-        <button class="btn-check" onclick="previewVideo()">🔍 動画チェック</button>
-        <div id="videoCard" class="video-card" style="display:none; margin-top:10px; display:flex; align-items:center; gap:10px;">
-            <img id="vcThumb" src="" style="width:100px; border-radius:8px;">
-            <div id="vcTitle" style="font-weight:bold;"></div>
+        <div class="setting-grid">
+            <div>
+                <div class="input-group"><label>👤 登録者1人 (pt)</label><input type="number" id="ptSub" value="100"></div>
+                <div class="input-group"><label>🎉 初コメ1件 (pt)</label><input type="number" id="ptFirst" value="50"></div>
+            </div>
+            <div>
+                <div class="input-group"><label>💬 コメント1件 (pt)</label><input type="number" id="ptComm" value="1"></div>
+            </div>
+        </div>
+        
+        <div style="text-align:right; font-size:0.85rem; color:#636e72; margin-top:-10px;">
+             PTリセット: <span id="apiResetTimeDisplay">--:--</span>
+        </div>
+
+        <button class="btn-check" onclick="previewVideo()">🔍 動画をチェックする</button>
+        <div id="videoCard" class="video-card">
+            <img id="vcThumb" src="" alt="">
+            <div><div id="vcTitle" style="font-weight:bold;"></div><div id="vcChannel" style="font-size:0.9rem; color:#636e72;"></div></div>
         </div>
     </div>
 
     <div class="glass-card score-card">
         <div style="text-align:center;">
-            <span style="background:#fff; padding:5px 15px; border-radius:20px; color:#6c5ce7; font-weight:bold;">🔥 <span id="challengeCount">1回目</span></span>
+            <span class="session-badge">🔥 <span id="challengeCount">1回目</span> の挑戦</span>
+            <div style="font-size:0.9rem; color:var(--text-sub); margin-top:5px;">( 前回スコア: <span id="prevScore" style="font-weight:bold;">--</span> pt )</div>
         </div>
-        <div style="text-align:center; margin:20px 0;">
-            <div style="color:#636e72; font-weight:bold; letter-spacing:2px;">TOTAL POINTS</div>
+        <div class="score-area">
+            <div class="score-title">✨ TOTAL POINTS ✨</div>
             <div id="totalPoints" class="score-value">0</div>
         </div>
 
-        <div class="timer-display-area">
-            <div id="timer-hatsu" class="timer-box" onclick="manualHatsuAction()" style="border-color:#e84393; cursor:pointer;">
-                <div style="font-weight:bold; color:#666;">初コメ耐久 (Click Reset)</div>
+        <div class="timer-display-area" id="timerArea">
+            <div id="timer-hatsu" class="timer-box" onclick="manualHatsuAction()">
+                <div class="timer-label">初コメ耐久 (Click Reset)</div>
                 <div class="timer-time" id="hatsu-time">--:--</div>
-                <div id="hatsu-msg" style="font-weight:bold; color:#555; height:1.5em;">待ち...</div>
+                <div class="timer-msg" id="hatsu-msg">コメント待ち...</div>
             </div>
-            <div id="timer-dousetsu" class="timer-box" style="border-color:#0984e3;">
-                <div style="font-weight:bold; color:#666;">同接維持</div>
+            <div id="timer-dousetsu" class="timer-box">
+                <div class="timer-label">同接維持</div>
                 <div class="timer-time" id="dousetsu-time">--:--</div>
-                <div id="dousetsu-msg" style="font-weight:bold; color:#555; height:1.5em;">維持中</div>
+                <div class="timer-msg" id="dousetsu-msg">維持してね！</div>
             </div>
         </div>
 
         <div class="stats-grid">
             <div class="stat-box">
                 <span class="stat-num" id="dispSubsVal">0</span>
-                <span style="color:#00b894; font-weight:bold;" id="dispSubsInc">(+0)</span>
-                <div id="subManualControls" style="display:none; margin-top:5px;">
-                    <button class="btn-adj" style="background:#d63031" onclick="adjustSub(-1)">-</button>
-                    <button class="btn-adj" style="background:#00b894" onclick="adjustSub(1)">+</button>
+                <span class="stat-sub" id="dispSubsInc">(+0)</span>
+                <div id="subManualControls" style="margin-top:10px; display:none;">
+                    <button class="btn-adj btn-minus" onclick="adjustSub(-1)">-</button>
+                    <button class="btn-adj btn-plus" onclick="adjustSub(1)">+</button>
                 </div>
-                <span style="font-size:0.9rem; color:#636e72; font-weight:bold;">登録者数</span>
+                <span class="stat-label">👤 登録者数</span>
             </div>
             <div class="stat-box">
                 <span class="stat-num" id="dispFirst">0</span>
-                <div style="margin-top:5px;">
-                    <button class="btn-adj" style="background:#d63031" onclick="adjustFirst(-1)">-</button>
-                    <button class="btn-adj" style="background:#0984e3" onclick="manualHatsuAction()">R</button>
+                <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+                    <button class="btn-adj btn-minus" onclick="adjustFirst(-1)">-1</button>
+                    <button class="btn-manual" onclick="manualHatsuAction()">+1 / Reset</button>
                 </div>
-                <span style="font-size:0.9rem; color:#636e72; font-weight:bold;">初コメ数</span>
+                <span class="stat-label">🎉 初コメ (回数)</span>
+                <div style="font-size:0.8rem; color:#aaa; margin-top:5px;">(タイマー押下も可)</div>
             </div>
             <div class="stat-box">
                 <span class="stat-num" id="dispComm">0</span>
-                <span style="font-size:0.9rem; color:#636e72; font-weight:bold;">総コメント</span>
+                <span class="stat-label">💬 総コメント</span>
+                <div style="font-size:0.75rem; color:#b2bec3; margin-top:4px;">(更新: <span id="lastCommTime">--:--:--</span>)</div>
             </div>
             <div class="stat-box">
                 <span class="stat-num" id="dispViewers">-</span>
-                <span style="font-size:0.9rem; color:#636e72; font-weight:bold;">同接</span>
+                <span class="stat-label">👀 現在同接</span>
             </div>
         </div>
         
-        <div style="text-align:center; font-weight:bold; color:#e74c3c; margin-bottom:10px;" id="conditionStatusText"></div>
+        <div style="margin-top:24px; text-align:center; font-size:1.1rem; font-weight:bold; color:var(--text-sub);">
+            <span id="conditionStatusText">準備中</span>
+        </div>
+        
+        <div class="control-area">
+            <button id="btnStart" class="btn-start" onclick="startTracking()">🚀 計測スタート！</button>
+            <button id="btnStop" class="btn-stop" onclick="stopTrackingManual()">⛔ 計測ストップ (集計して終了)</button>
+        </div>
 
-        <button id="btnStart" class="btn-start" onclick="startTracking()">🚀 計測スタート！</button>
-        <button id="btnStop" class="btn-stop" onclick="stopTrackingManual()">⛔ STOP</button>
-
-        <div style="margin-top:20px; display:flex; justify-content:center; gap:15px; align-items:center;">
-            <label><input type="checkbox" id="soundEnabled" checked> 🔊 音声ON</label>
-            <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="0.5">
-            <button onclick="playVolumeTest()" style="padding:5px 10px; border-radius:15px; background:#b2bec3; color:white;">テスト</button>
+        <div class="sound-setting">
+            <label style="cursor:pointer; font-size:0.9rem; display:flex; align-items:center; gap:5px;">
+                <input type="checkbox" id="soundEnabled" checked style="width:18px; height:18px;"> 🔊 ON/OFF
+            </label>
+            <div class="volume-control">
+                <span style="font-size:0.85rem; color:var(--text-sub);">音量</span>
+                <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="0.5">
+                <span id="volValue" style="font-size:0.9rem; font-weight:bold; color:var(--accent-color); width: 45px;">50%</span>
+            </div>
+            <button class="btn-test" onclick="playVolumeTest()">🔊 テスト</button>
         </div>
     </div>
 
     <div class="glass-card history-wrap">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h2>📜 履歴</h2>
-            <button onclick="clearHistory()" style="background:#ff7675; color:white; padding:5px 10px; border-radius:10px;">削除</button>
+        <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items:center;">
+            <h2 style="margin:0; border:none; font-size:1.3rem;">📜 過去の履歴</h2>
+            <div>
+                <button onclick="downloadCSV()" style="background:#b2bec3; padding:8px 16px; border-radius:20px; color:#fff;">CSV保存</button>
+                <button onclick="clearHistory()" style="background:#ff7675; padding:8px 16px; border-radius:20px; color:#fff; margin-left:5px;">全削除</button>
+            </div>
         </div>
-        <div style="overflow-x:auto;">
-            <table id="historyTable" style="width:100%; border-collapse:collapse;">
-                <thead><tr style="background:#dfe6e9;"><th>回</th><th>pt</th><th>時間</th><th>理由</th></tr></thead>
-                <tbody></tbody>
-            </table>
+        <div class="table-wrap">
+            <table id="historyTable"><thead><tr><th>回</th><th>pt</th><th>開始</th><th>終了</th><th>登録増</th><th>初コメ</th><th>コメ</th><th>理由</th></tr></thead><tbody></tbody></table>
         </div>
     </div>
 </div>
 
+<div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li><li>※複数アカウントで作成したキーを入力すると制限が緩和されます！</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;">閉じる</button></div></div>
+
 <script>
-    // --- 変数定義 ---
-    const HISTORY_KEY = "yt_endurance_v5_final", CHANNEL_MEM_KEY = "yt_channel_mem";
-    let isTracking=false, isFinishing=false;
-    let sessionData={ startTime:null, startSubCount:0, currentSubCount:0, totalComments:0, manualFirstComments:0, currentViewers:0 };
-    let visualState={ totalPoints:0, subCount:0, firstCount:0, totalComments:0, viewers:0 };
-    let audioCtx=null, checkInterval=null;
+    const HISTORY_KEY = "yt_endurance_v4_fixed", QUOTA_KEY_PREFIX = "yt_api_usage_", CHANNEL_MEM_KEY = "yt_channel_speed_mem";
+    const NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
     
-    // タイマー・アラート管理用変数
-    let lastManualFirstActionTime = 0;
-    let dousetsuDropStartTime = null;
-    let lastHatsuSec = null; // 前回の秒数を保持（30秒またぎ判定用）
-    let lastDousetsuSec = null;
+    // Global variables
+    let isTracking = false;
+    let isFinishing = false;
+    let lastStatsTime = 0; 
+    let lastCommentReceivedTime = 0;
+    let currentPollingInterval = 5000; 
+    let youtubeSuggestedInterval = 5000; 
+    let lastFetchTime = 0;
+    let lastManualFirstActionTime = 0; 
+    let dousetsuDropStartTime = null; 
+    let lastDousetsuCheckSec = null; 
+    let checkInterval = null; 
+    let hasWarned30SecHatsu = false;
+    let hasWarned30SecDousetsu = false;
+    let lastCommentCountWarn = null; 
+    // 追加: 1分ごとの音を鳴らすための変数
+    let lastHatsuBeepSec = null;
+    let lastDousetsuBeepSec = null;
+
+    let sessionData = { startTime: null, startSubCount: 0, currentSubCount: 0, totalComments: 0, manualFirstComments: 0, currentViewers: 0 };
+    let videoId = "", channelId = "", liveChatId = null, nextPageToken = null;
+    let isDemo = false, isManualSub = true;
+    let apiKeys = [];
+    let currentKeyIndex = 0;
+    let audioCtx = null;
+    let globalVolume = 0.5;
+    let visualState = { totalPoints: 0, subCount: 0, firstCount: 0, totalComments: 0, viewers: 0 };
+    let predictedApiCount = 0;
+    let predictionSource = "default";
+    let predictionTimeout = null;
+
+    // --- Global Functions (Defined on window) ---
+    window.toggleObs = function() {
+        document.body.classList.toggle('obs-mode');
+        // OBSモード時は背景画像を消す
+        document.body.style.backgroundImage = document.body.classList.contains('obs-mode') ? 'none' : '';
+    };
+
+    window.openModal = function() { document.getElementById('helpModal').style.display = 'flex'; };
+    window.closeModal = function() { document.getElementById('helpModal').style.display = 'none'; };
     
-    // API関連
-    let videoId="", channelId="", liveChatId=null, nextPageToken=null;
-    let isDemo=false, isManualSub=true;
-    let apiKeys=[], currentKeyIndex=0;
-    let youtubeSuggestedInterval=5000, currentPollingInterval=5000;
+    window.toggleApiVisibility = function() {
+        const area = document.getElementById('apiKey');
+        if (area.classList.contains('api-hidden')) area.classList.remove('api-hidden');
+        else area.classList.add('api-hidden');
+    };
 
-    // --- 音声・通知 ---
-    function initAudio() {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-    }
-    
-    function speakText(text) {
-        if (!document.getElementById('soundEnabled').checked) return;
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel(); // 割り込み
-            const u = new SpeechSynthesisUtterance(text);
-            u.volume = document.getElementById('volumeSlider').value;
-            u.lang = "ja-JP";
-            window.speechSynthesis.speak(u);
-        }
-    }
+    window.onload = function() { 
+        renderHistory(); 
+        checkDstAndDisplayResetTime(); 
+        predictApiCountFromHistory(); // Initial predict
+        calculateSafeIntervals(); 
+        updateSessionInfo();
+        displayApiQuota(); 
+        updateVisibility(); 
+        requestAnimationFrame(updateVisualsLoop); 
+    };
 
-    function playPip() { // 1分ごとの「ピピッ」
-        if (!document.getElementById('soundEnabled').checked) return;
-        initAudio();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(1800, audioCtx.currentTime + 0.08); // キレの良い音
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-    }
-
-    function playVolumeTest() {
-        if (!document.getElementById('soundEnabled').checked) return;
-        initAudio();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.5);
-    }
-
-    // --- メインループ ---
-    window.onload = function() { renderHistory(); updateVisibility(); requestAnimationFrame(updateVisualsLoop); };
+    document.getElementById('cond_no_first').addEventListener('change', updateVisibility);
+    document.getElementById('cond_low_viewers').addEventListener('change', updateVisibility);
 
     function updateVisibility() {
         const useHatsu = document.getElementById('cond_no_first').checked;
         const useDousetsu = document.getElementById('cond_low_viewers').checked;
         document.getElementById('timer-hatsu').classList.toggle('active', useHatsu);
         document.getElementById('timer-dousetsu').classList.toggle('active', useDousetsu);
-        document.getElementById('btnStart').innerText = (useHatsu || useDousetsu) ? "🚀 耐久計測スタート！" : "▶️ 監視スタート";
     }
-    document.getElementById('cond_no_first').addEventListener('change', updateVisibility);
-    document.getElementById('cond_low_viewers').addEventListener('change', updateVisibility);
 
-    async function startTracking() {
-        if(isTracking) return;
-        initAudio();
+    // --- Prediction Logic ---
+    window.predictApiCountFromUrl = function() {
+        const url = document.getElementById('url').value;
+        const keys = getApiKeys();
+        
+        if (!url) {
+            predictApiCountFromHistory();
+            calculateSafeIntervals();
+            return;
+        }
+
+        // キーがない場合は予測できないので、UIで通知する
+        if (keys.length === 0) {
+            predictionSource = "need_key";
+            calculateSafeIntervals();
+            return;
+        }
+
+        if (predictionTimeout) clearTimeout(predictionTimeout);
+        predictionTimeout = setTimeout(async () => {
+            const vid = extractVideoId(url);
+            if (!vid) return;
+
+            try {
+                const key = keys[0];
+                const vRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${vid}&key=${key}`);
+                const vData = await vRes.json();
+                if (!vData.items || vData.items.length === 0) return;
+                
+                const cid = vData.items[0].snippet.channelId;
+                
+                const mem = JSON.parse(localStorage.getItem(CHANNEL_MEM_KEY) || "{}");
+                if (mem[cid]) {
+                    const knownCpm = mem[cid];
+                    predictedApiCount = (knownCpm > 1000) ? 5 : (knownCpm > 200) ? 3 : 1;
+                    predictionSource = "known";
+                    calculateSafeIntervals();
+                    return;
+                }
+
+                const cRes = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${cid}&key=${key}`);
+                const cData = await cRes.json();
+                if (!cData.items || cData.items.length === 0) return;
+
+                const subs = parseInt(cData.items[0].statistics.subscriberCount);
+                if (subs >= 1000000) predictedApiCount = 5;
+                else if (subs >= 500000) predictedApiCount = 3;
+                else if (subs >= 100000) predictedApiCount = 2;
+                else predictedApiCount = 1;
+                
+                predictionSource = "subscribers";
+                calculateSafeIntervals();
+            } catch (e) { console.log("Prediction error", e); }
+        }, 1000);
+    };
+
+    function predictApiCountFromHistory() {
+        const h = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+        if (h.length === 0) {
+            predictedApiCount = 2; 
+            predictionSource = "default";
+            return;
+        }
+        let maxCpm = 0;
+        h.forEach(rec => {
+            const durationMin = (new Date(rec.endTime) - new Date(rec.startTime)) / 60000;
+            const cpm = rec.totalComments / (durationMin || 1);
+            if (cpm > maxCpm) maxCpm = cpm;
+        });
+        predictedApiCount = (maxCpm > 1000) ? 4 : (maxCpm > 200) ? 3 : (maxCpm > 50) ? 2 : 1;
+        predictionSource = "history";
+    }
+
+    window.calculateSafeIntervals = function() {
+        const keys = getApiKeys();
+        const keyCount = keys.length > 0 ? keys.length : 1;
+        
+        const Z = calculateZ();
+        let limitPerKey = 9800;
+        if (Z > 19) limitPerKey = 8500;
+        else if (Z > 6) limitPerKey = 9000;
+        
+        const totalBudget = limitPerKey * keyCount;
+        const budgetPerHour = totalBudget / (Z + 4);
+        const fetchesPerHour = budgetPerHour / 5; 
+        const recInterval = 3600 / fetchesPerHour;
+        
+        const isAuto = document.getElementById('autoSpeedCheck').checked;
+        const displayEl = document.getElementById('chatIntervalDisplay');
+        const inputEl = document.getElementById('minIntervalSeconds');
+        
+        if (isAuto) {
+             inputEl.style.display = 'none';
+             let msg = "";
+             if (predictionSource === "need_key") {
+                 msg = "ℹ️ APIキーを入力すると、チャンネルの規模（登録者数）から必要数を計算します";
+                 displayEl.style.color = "#0984e3";
+             } else if (predictionSource === "known") {
+                 msg = `📈 過去の計測データから、\nキー ${predictedApiCount}個 の使用を推奨します。`;
+                 displayEl.style.color = "#e84393"; 
+             } else if (predictionSource === "subscribers") {
+                 msg = `📊 チャンネル規模から予測して、\nキー ${predictedApiCount}個 あれば安心です。`;
+                 displayEl.style.color = "#6c5ce7";
+             } else if (predictionSource === "history") {
+                 msg = `📜 あなたの過去の傾向から、\nキー ${predictedApiCount}個 程度を推奨します。`;
+                 displayEl.style.color = "#00b894";
+             } else {
+                 msg = `目安: 自動制御\n(激流耐久ならキー${predictedApiCount}個推奨)`;
+                 displayEl.style.color = "#636e72";
+             }
+             
+             if (keys.length < predictedApiCount && !document.getElementById('demoModeCheck').checked && predictionSource !== "need_key") {
+                 msg += `\n⚠️ 現在${keys.length}個 (不足の可能性あり)`;
+                 displayEl.style.color = "#d63031";
+             }
+             displayEl.innerText = msg;
+        } else {
+             inputEl.style.display = 'inline-block';
+             inputEl.value = recInterval.toFixed(1);
+             inputEl.readOnly = true;
+             displayEl.innerText = `固定設定: ${recInterval.toFixed(1)}s (1日上限: ${totalBudget}pt)`;
+             displayEl.style.color = "#00b894"; 
+        }
+        
+        displayApiQuota();
+    };
+
+    // --- Utils ---
+    function getApiKeys() {
+        const raw = document.getElementById('apiKey').value;
+        if (!raw) return [];
+        let keys = raw.split(/[\n,\s]+/).filter(k => k.trim().length > 0);
+        return [...new Set(keys)];
+    }
+    
+    function extractVideoId(u){ const m=u.match(/^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/); return (m&&m[7].length==11)?m[7]:false; }
+
+    function getPtDateString() {
+        const d = new Date();
+        return d.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+    }
+    function getHoursUntilPtMidnight() {
+        const now = new Date();
+        const ptStr = now.toLocaleString("en-US", {timeZone: "America/Los_Angeles"});
+        const ptDate = new Date(ptStr); 
+        const nextMidnight = new Date(ptDate);
+        nextMidnight.setHours(24, 0, 0, 0);
+        return (nextMidnight - ptDate) / (1000 * 60 * 60);
+    }
+    function checkDstAndDisplayResetTime() {
+        const now = new Date();
+        const m = now.getMonth();
+        const isDst = (m > 2 && m < 10); 
+        const resetHour = isDst ? 16 : 17;
+        document.getElementById('apiResetTimeDisplay').innerText = `${resetHour}:00`;
+        return resetHour;
+    }
+    function getKeyUsage(key) {
+        if(isDemo) return 0;
+        const today = getPtDateString();
+        const record = JSON.parse(localStorage.getItem(QUOTA_KEY_PREFIX + key) || "{}");
+        if (record.date !== today) return 0;
+        return record.count || 0;
+    }
+    function addKeyUsage(key, amount) {
+        if(isDemo) return;
+        const today = getPtDateString();
+        let record = JSON.parse(localStorage.getItem(QUOTA_KEY_PREFIX + key) || "{}");
+        if (record.date !== today) { record = { date: today, count: 0 }; }
+        record.count = (record.count || 0) + amount;
+        localStorage.setItem(QUOTA_KEY_PREFIX + key, JSON.stringify(record));
+        displayApiQuota();
+    }
+    function getTotalQuotaUsed() {
+        let total = 0;
+        getApiKeys().forEach(key => total += getKeyUsage(key));
+        return total;
+    }
+    function checkQuotaSafe() {
+        if(document.getElementById('demoModeCheck').checked) return true;
+        const keys = getApiKeys();
+        if(keys.length === 0) return false;
+        const limit = keys.length * 10000;
+        return getTotalQuotaUsed() < limit;
+    }
+    function getNextApiKey() {
+        if (apiKeys.length === 0) return "";
+        const Z = calculateZ(); 
+        let limitPerKey = 9800; 
+        if (Z > 19) limitPerKey = 8500;
+        else if (Z > 6) limitPerKey = 9000;
+        let attempts = 0;
+        while(attempts < apiKeys.length) {
+            const key = apiKeys[currentKeyIndex];
+            const usage = getKeyUsage(key);
+            if (usage < limitPerKey) {
+                currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+                return key;
+            }
+            currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+            attempts++;
+        }
+        throw new Error("全APIキーの配給上限(Quota)に達しました");
+    }
+    function calculateZ() {
+        let h = parseFloat(document.getElementById('targetHours').value) || 12;
+        const hoursToMidnight = getHoursUntilPtMidnight();
+        let Z = h;
+        if (h > hoursToMidnight) {
+            const x = hoursToMidnight;
+            const y = h - hoursToMidnight;
+            Z = Math.max(x, y);
+        }
+        return Z;
+    }
+    function displayApiQuota() {
+        const total = getTotalQuotaUsed();
+        const keys = getApiKeys();
+        const maxTotal = keys.length * 10000;
+        document.getElementById('apiQuotaDisplay').innerText = `${total} / ${maxTotal}`;
+        const pct = maxTotal > 0 ? Math.min(100, (total / maxTotal) * 100) : 0;
+        const bar = document.getElementById('apiBar');
+        bar.style.width = `${pct}%`;
+        if(pct > 90) bar.style.background = "#d63031"; 
+        else if(pct > 70) bar.style.background = "#fdcb6e"; 
+        else bar.style.background = "#00b894"; 
+    }
+    
+    // --- Main Logic ---
+    window.previewVideo = async function() {
+        if(document.getElementById('demoModeCheck').checked) { alert("デモモード中は動画確認は不要です"); return; }
+        apiKeys = getApiKeys();
+        if (apiKeys.length === 0) { alert("APIキーを入力してください"); return; }
+        const u = document.getElementById('url').value; 
+        if (!u) { alert("URLを入力してください"); return; }
+        const vid = extractVideoId(u); if(!vid) { alert("URLが変かも？"); return; }
+        try {
+            const d = await fetchVideoDetails(vid, apiKeys[0]);
+            document.getElementById('vcThumb').src = d.snippet.thumbnails.medium.url;
+            document.getElementById('vcTitle').innerText = d.snippet.title;
+            document.getElementById('vcChannel').innerText = d.snippet.channelTitle;
+            document.getElementById('videoCard').style.display = "flex";
+            
+            const mem = JSON.parse(localStorage.getItem(CHANNEL_MEM_KEY) || "{}");
+            if(mem[d.snippet.channelId]) {
+                const maxCpm = mem[d.snippet.channelId];
+                if(maxCpm > 50) {
+                    setStatus(`⚠️ 過去の激流チャンネルを検知 (Max CPM: ${maxCpm})`, "warning");
+                    document.getElementById('autoSpeedCheck').checked = true;
+                }
+            }
+        } catch (e) { alert("エラー: " + e.message); }
+    };
+
+    window.startTracking = async function() {
+        if (isTracking) return;
+        apiKeys = getApiKeys();
+        if(!document.getElementById('demoModeCheck').checked && apiKeys.length === 0) {
+            alert("APIキーを入力してください"); return;
+        }
+        if (!checkQuotaSafe()) {
+            alert("本日のAPI使用上限に達しているため開始できません。\n(キーを追加するか、太平洋時間 0時 までお待ちください)"); return;
+        }
+        initAudio(); 
         isDemo = document.getElementById('demoModeCheck').checked;
         isManualSub = document.getElementById('manualSubCheck').checked;
-        if(!isDemo && !document.getElementById('apiKey').value) return alert("APIキーを入れてね");
-        if(!isDemo && !document.getElementById('url').value) return alert("URLを入れてね");
-
+        if (!isDemo && !validateInputs()) return;
         try {
-            if(isDemo) {
-                sessionData = { startTime: new Date(), startSubCount: 10000, currentSubCount: 10000, totalComments: 0, manualFirstComments: 0, currentViewers: 50 };
-            } else {
-                videoId = extractVideoId(document.getElementById('url').value);
-                const k = getNextApiKey();
-                const v = await fetchVideo(videoId, k);
-                if(!v.liveStreamingDetails?.activeLiveChatId) throw new Error("配信してないかも");
-                liveChatId = v.liveStreamingDetails.activeLiveChatId; channelId = v.snippet.channelId;
-                sessionData = { startTime: new Date(), startSubCount: 0, currentSubCount: 0, totalComments: 0, manualFirstComments: 0, currentViewers: parseInt(v.liveStreamingDetails.concurrentViewers||0) };
-                // 登録者取得などは省略（簡易化）
-                if(!isManualSub) { const c = await fetchChannel(channelId, getNextApiKey()); sessionData.currentSubCount = parseInt(c.statistics.subscriberCount); sessionData.startSubCount = sessionData.currentSubCount; }
-            }
-            
-            isTracking = true; isFinishing = false;
+            await initSession(); 
+            isTracking = true;
+            isFinishing = false; 
             document.body.classList.add('tracking');
-            document.getElementById('subManualControls').style.display = isManualSub ? 'block' : 'none';
-            document.getElementById('statusBox').className = "status-bar status-ok";
-            document.getElementById('statusBox').innerText = "🚀 計測中...";
+            document.getElementById('apiKey').classList.add('api-hidden');
+
+            // --- 修正: ボタン表示の確実な切り替え ---
+            document.getElementById('btnStart').style.display = 'none';
+            document.getElementById('btnStop').style.display = 'block';
+
+            if(isManualSub) document.getElementById('subManualControls').style.display = 'block';
+            else document.getElementById('subManualControls').style.display = 'none';
+            if(isDemo) setStatus("🧪 デモモード中 (架空のデータ)", "demo"); 
+            else setStatus("🚀 計測開始！", "active");
             
-            // リセット
             lastManualFirstActionTime = Date.now();
             dousetsuDropStartTime = null;
-            lastHatsuSec = 9999; // 初期値
-            lastDousetsuSec = 9999;
+            hasWarned30SecHatsu = false;
+            hasWarned30SecDousetsu = false;
+            lastCommentCountWarn = null;
+            lastDousetsuCheckSec = null;
+            lastHatsuBeepSec = null;    // 追加: リセット
+            lastDousetsuBeepSec = null; // 追加: リセット
+
+            lastStatsTime = Date.now(); 
+            lastCommentReceivedTime = Date.now(); 
+            currentPollingInterval = parseFloat(document.getElementById('minIntervalSeconds').value) * 1000;
+            if(isNaN(currentPollingInterval) || currentPollingInterval < 500) currentPollingInterval = 5000;
+            lastFetchTime = Date.now(); 
             
+            if(!isDemo && channelId) {
+                const mem = JSON.parse(localStorage.getItem(CHANNEL_MEM_KEY) || "{}");
+                if(mem[channelId] && mem[channelId] > 50 && document.getElementById('autoSpeedCheck').checked) {
+                    currentPollingInterval = 1000; 
+                    setStatus("🚀 過去の激流データを検知。高速モードで開始します。", "active");
+                }
+            }
+            visualState.subCount = sessionData.currentSubCount;
+            visualState.firstCount = sessionData.manualFirstComments;
+            visualState.totalComments = sessionData.totalComments;
+            visualState.viewers = sessionData.currentViewers;
+            visualState.totalPoints = calculatePoints();
+            updateSessionInfo(); 
             runApiLoop();
             if(checkInterval) clearInterval(checkInterval);
-            checkInterval = setInterval(checkConditionsAndTimer, 200); // 0.2秒ごとにチェック
-            
-        } catch(e) { alert("エラー: "+e.message); }
-    }
+            checkInterval = setInterval(checkConditionsAndTimer, 200); 
+        } catch (e) { alert("開始エラー: " + e.message); }
+    };
+    
+    window.stopTrackingManual = function() { if(isTracking) finishSession("手動STOP"); };
 
-    // ★★★ 最重要：タイマーとアラートのロジック ★★★
-    function checkConditionsAndTimer() {
-        if(!isTracking) return;
-        const now = Date.now();
-        let danger = false;
-
-        // (1) 初コメ耐久
-        if (document.getElementById('cond_no_first').checked) {
-            const limitMin = parseFloat(document.getElementById('val_no_first_min').value);
-            const elapsed = now - lastManualFirstActionTime;
-            const remainingMs = (limitMin * 60 * 1000) - elapsed;
-            const remainingSec = Math.ceil(remainingMs / 1000);
-
-            // 表示更新
-            updateTimerUI('hatsu', remainingSec);
-
-            // 1分ごとの音 (60で割り切れる、かつ前回の秒数と違う、かつ0秒じゃない)
-            if (remainingSec > 0 && remainingSec % 60 === 0 && lastHatsuSec !== remainingSec) {
-                playPip();
-            }
-
-            // 30秒前の通知 (前回30より大きくて、今回30以下になった瞬間)
-            if (lastHatsuSec > 30 && remainingSec <= 30 && remainingSec > 0) {
-                speakText("はつこめ、30秒前");
-            }
-            
-            // 終了判定
-            if (remainingSec < 30) danger = true;
-            if (remainingSec <= -10) { finishSession("初コメ時間切れ"); return; }
-            
-            lastHatsuSec = remainingSec;
+    async function initSession() {
+        if(isDemo) {
+            sessionData = { startTime: new Date(), startSubCount: 10000, currentSubCount: 10000, totalComments: 0, manualFirstComments: 0, currentViewers: 50 };
+            nextPageToken=null; return;
         }
-
-        // (2) 同接維持
-        if (document.getElementById('cond_low_viewers').checked) {
-            const th = parseInt(document.getElementById('resetViewerThreshold').value);
-            const limitMin = parseFloat(document.getElementById('resetDurationMinutes').value);
-            
-            if (sessionData.currentViewers <= th) {
-                // 維持モード突入中
-                if (!dousetsuDropStartTime) dousetsuDropStartTime = now;
-                const elapsed = now - dousetsuDropStartTime;
-                const remainingMs = (limitMin * 60 * 1000) - elapsed;
-                const remainingSec = Math.ceil(remainingMs / 1000);
-
-                updateTimerUI('dousetsu', remainingSec);
-
-                // 1分ごとの音
-                if (remainingSec > 0 && remainingSec % 60 === 0 && lastDousetsuSec !== remainingSec) {
-                    playPip();
-                }
-
-                // 30秒前の通知 (前回30より大きくて、今回30以下になった瞬間)
-                if (lastDousetsuSec > 30 && remainingSec <= 30 && remainingSec > 0) {
-                    speakText("同接維持、30秒前");
-                }
-
-                if (remainingSec < 30) danger = true;
-                if (remainingSec <= -10) { finishSession("同接低下終了"); return; }
-                lastDousetsuSec = remainingSec;
-
-            } else {
-                // 安全圏
-                dousetsuDropStartTime = null;
-                lastDousetsuSec = 9999; // リセット
-                updateTimerUI('dousetsu', limitMin * 60);
-                document.getElementById('dousetsu-msg').innerText = "維持中 (安全)";
-            }
+        videoId = extractVideoId(document.getElementById('url').value);
+        const key = getNextApiKey();
+        const v = await fetchVideoDetails(videoId, key);
+        if (!v.liveStreamingDetails?.activeLiveChatId) throw new Error("配信中じゃないかも");
+        liveChatId = v.liveStreamingDetails.activeLiveChatId; channelId = v.snippet.channelId;
+        const key2 = getNextApiKey();
+        const c = await fetchChannelDetails(channelId, key2);
+        let initialSub = parseInt(c.statistics.subscriberCount);
+        if(isManualSub) {
+            let input = prompt(`現在APIが取得した登録者数は「${initialSub}」です。\n正確な開始時の登録者数を入力してください:`, initialSub);
+            if(input !== null && !isNaN(parseInt(input))) { initialSub = parseInt(input); }
         }
-        
-        // ゴール判定などは省略せずに実装
-        const goalV = parseInt(document.getElementById('val_goal_viewers').value);
-        if (document.getElementById('cond_goal_viewers').checked && sessionData.currentViewers >= goalV) finishSession("同接ゴール達成");
-        
-        const textEl = document.getElementById('conditionStatusText');
-        textEl.innerText = danger ? "⚠️ 終了条件に接近中..." : "";
+        sessionData = { startTime: new Date(), startSubCount: initialSub, currentSubCount: initialSub, totalComments: 0, manualFirstComments: 0, currentViewers: parseInt(v.liveStreamingDetails.concurrentViewers||0) };
+        nextPageToken=null;
     }
-
-    // --- APIループ & 同接アラート ---
+    
     async function runApiLoop() {
-        if(!isTracking) return;
+        if (!isTracking) return;
+        const now = Date.now();
+        let itemCount = 0;
         try {
-            if(isDemo) {
-                await demoSimulate();
+            if(isDemo) { 
+                await demoSimulate(); 
+                itemCount = Math.floor(Math.random() * 5);
             } else {
-                const k = getNextApiKey();
-                await fetchComments(k);
-                await updateStats();
+                const key = getNextApiKey();
+                itemCount = await fetchComments(key);
+                if (Date.now()-lastCommentReceivedTime >= NO_COMMENT_LIMIT_MS) { finishSession("コメント停止(30分)"); return; }
+                if (now - lastStatsTime >= 60000) { await updateStatsSingle(); }
+            }
+            if(document.getElementById('autoSpeedCheck').checked) {
+                const BATCH_TARGET = 1800; 
+                const DANGER_ZONE = 1950;  
+                const timeDiff = now - lastFetchTime; 
+                lastFetchTime = now;
+                const rate = (itemCount / (timeDiff || 1)) || 0.0001; 
+                if (itemCount >= DANGER_ZONE) {
+                    currentPollingInterval = 500; 
+                    setStatus(`🔥 急加速! (${itemCount}コメ)`, "warn");
+                } else if (itemCount > 0) {
+                    let targetInterval = BATCH_TARGET / rate;
+                    targetInterval = Math.max(500, Math.min(targetInterval, 60000));
+                    const smoothingFactor = (targetInterval > currentPollingInterval) ? 0.2 : 0.5;
+                    currentPollingInterval = currentPollingInterval + (targetInterval - currentPollingInterval) * smoothingFactor;
+                    const sec = (currentPollingInterval/1000).toFixed(1);
+                    setStatus(`🚀 巡航中 (${itemCount}コメ, Interval: ${sec}s)`, "active");
+                } else {
+                    currentPollingInterval = Math.min(currentPollingInterval * 1.5, 60000);
+                    setStatus(`💤 待機中 (${(currentPollingInterval/1000).toFixed(1)}s)`, "grace");
+                }
+            } else {
+                const userSetting = parseFloat(document.getElementById('minIntervalSeconds').value) * 1000;
+                currentPollingInterval = Math.max(userSetting, youtubeSuggestedInterval);
+                currentPollingInterval = Math.min(currentPollingInterval, 60000); 
+                currentPollingInterval = Math.max(currentPollingInterval, 5000); 
+                setStatus(`🛑 固定モード (${(currentPollingInterval/1000).toFixed(1)}s)`, "active");
             }
             setTimeout(runApiLoop, currentPollingInterval);
-        } catch(e) { console.error(e); setTimeout(runApiLoop, 10000); }
-    }
-
-    // 同接の増減アラート (API更新時に呼ばれる)
-    function checkViewerAlerts(oldVal, newVal) {
-        if (!isTracking) return;
-        const th = parseInt(document.getElementById('resetViewerThreshold').value);
-        if(document.getElementById('cond_low_viewers').checked) {
-            if (oldVal > th && newVal <= th) speakText("同接が基準を下回りました。タイマー、スタート。");
-            if (oldVal <= th && newVal > th) speakText("同接が回復しました！安全圏です。");
+        } catch (e) { 
+            console.error(e);
+            if (e.message.includes("403") || e.message.includes("429")) { finishSession(`強制停止: ${e.message}`); return; }
+            setTimeout(runApiLoop, 10000); 
         }
     }
-
-    async function updateStats() {
-        const k = getNextApiKey();
-        const v = await fetchVideo(videoId, k);
-        const newV = parseInt(v.liveStreamingDetails.concurrentViewers||0);
-        checkViewerAlerts(sessionData.currentViewers, newV);
-        sessionData.currentViewers = newV;
+    
+    async function updateStatsSingle() {
+        if(!isTracking && !isDemo) return; 
+        try {
+            if(isDemo) return;
+            const key = getNextApiKey();
+            const v = await fetchVideoDetails(videoId, key);
+            const viewers = parseInt(v.liveStreamingDetails.concurrentViewers||0);
+            sessionData.currentViewers = viewers;
+            if(!isManualSub && Math.random() > 0.9) {
+                const key2 = getNextApiKey();
+                const c = await fetchChannelDetails(channelId, key2);
+                sessionData.currentSubCount = parseInt(c.statistics.subscriberCount);
+            }
+            lastStatsTime = Date.now();
+        } catch(e) { console.error("Stats update failed:", e); }
     }
-
-    // --- その他UI更新 ---
+    
     function updateVisualsLoop() {
         if(isTracking) {
-            visualState.totalPoints = lerp(visualState.totalPoints, calculatePoints(), 0.1);
+            const targetPoints = calculatePoints();
+            visualState.totalPoints = lerp(visualState.totalPoints, targetPoints, 0.1);
             visualState.subCount = lerp(visualState.subCount, sessionData.currentSubCount, 0.1);
-            visualState.viewers = lerp(visualState.viewers, sessionData.currentViewers, 0.1);
-            visualState.totalComments = sessionData.totalComments;
-            visualState.firstCount = sessionData.manualFirstComments;
-
-            document.getElementById('totalPoints').innerText = Math.round(visualState.totalPoints).toLocaleString();
+            visualState.totalComments = lerp(visualState.totalComments, sessionData.totalComments, 0.05);
+            visualState.viewers = lerp(visualState.viewers, sessionData.currentViewers, 0.05);
+            visualState.firstCount = sessionData.manualFirstComments; 
+            const subDiff = Math.max(0, Math.round(visualState.subCount) - sessionData.startSubCount);
             document.getElementById('dispSubsVal').innerText = Math.round(visualState.subCount).toLocaleString();
-            document.getElementById('dispSubsInc').innerText = `(+${Math.max(0, Math.round(visualState.subCount)-sessionData.startSubCount)})`;
+            document.getElementById('dispSubsInc').innerText = `(+${subDiff})`;
             document.getElementById('dispFirst').innerText = visualState.firstCount;
-            document.getElementById('dispComm').innerText = visualState.totalComments;
+            document.getElementById('dispComm').innerText = Math.round(visualState.totalComments).toLocaleString();
             document.getElementById('dispViewers').innerText = Math.round(visualState.viewers).toLocaleString();
+            document.getElementById('totalPoints').innerText = Math.round(visualState.totalPoints).toLocaleString();
         }
         requestAnimationFrame(updateVisualsLoop);
     }
-    function updateTimerUI(type, sec) {
-        const el = document.getElementById(`${type}-time`);
-        const msg = document.getElementById(`${type}-msg`);
-        const m = Math.floor(Math.abs(sec)/60).toString().padStart(2,'0');
-        const s = Math.floor(Math.abs(sec)%60).toString().padStart(2,'0');
-        el.innerText = (sec<0?"-":"")+m+":"+s;
-        if(sec<30) el.classList.add('danger-text'); else el.classList.remove('danger-text');
+    function lerp(start, end, factor) {
+        let diff = end - start;
+        if (Math.abs(diff) < 0.5) return end;
+        return start + (diff * factor);
     }
     
-    // --- ヘルパー ---
+    window.checkInputs = function() {
+        const url = document.getElementById('url').value;
+        const key = document.getElementById('apiKey').value;
+        const demo = document.getElementById('demoModeCheck').checked;
+        const status = document.getElementById('statusBox');
+        
+        if(demo) {
+            status.innerHTML = "🧪 デモモード中 (API不使用)";
+            status.className = "status-bar status-demo";
+        } else if(url && key) {
+            status.innerHTML = "✅ 準備OK！スタートを押してね";
+            status.className = "status-bar status-ok";
+        } else {
+            status.innerHTML = "👋 設定を入力してね";
+            status.className = "status-bar";
+        }
+        calculateSafeIntervals();
+    };
+
+    function checkConditionsAndTimer() {
+        if(!isTracking) return; 
+        const now = Date.now();
+        const useGoalViewers = document.getElementById('cond_goal_viewers').checked;
+        const useGoalSubs = document.getElementById('cond_goal_subs').checked;
+        const useLimitComments = document.getElementById('cond_limit_comments').checked;
+        const useHatsu = document.getElementById('cond_no_first').checked;
+        const useDousetsu = document.getElementById('cond_low_viewers').checked;
+        let danger = false;
+        if(useGoalViewers) {
+            const goalV = parseInt(document.getElementById('val_goal_viewers').value);
+            const remaining = goalV - sessionData.currentViewers;
+            if (remaining <= 10) danger = true; 
+            if (remaining <= 0) { finishSession(`終了：同接ゴール達成 (${goalV}人)`); return; }
+        }
+        if(useGoalSubs) {
+            const goalS = parseInt(document.getElementById('val_goal_subs').value);
+            const remaining = goalS - sessionData.currentSubCount;
+            if (remaining <= 20) danger = true; 
+            if (remaining <= 0) { finishSession(`終了：登録者ゴール達成 (${goalS}人)`); return; }
+        }
+        if(useLimitComments) {
+            const limitC = parseInt(document.getElementById('val_limit_comments').value);
+            const remaining = limitC - sessionData.totalComments;
+            if (remaining <= 0) { finishSession(`終了：コメント数上限達成 (${limitC}件)`); return; }
+            if (remaining <= 100) {
+                const tenDigit = Math.floor(remaining / 10);
+                if (lastCommentCountWarn !== tenDigit) { speakText(`あと、${remaining}件です`); lastCommentCountWarn = tenDigit; }
+            }
+            if (remaining <= 20) danger = true;
+        }
+        if (useHatsu) {
+            const hatsuLimitMinutes = parseFloat(document.getElementById('val_no_first_min').value);
+            const hatsuLimitMs = hatsuLimitMinutes * 60 * 1000;
+            const elapsed = now - lastManualFirstActionTime;
+            const remainingMs = hatsuLimitMs - elapsed;
+            const remainingSec = Math.ceil(remainingMs / 1000);
+            updateTimerUI('hatsu', remainingSec);
+            
+            // --- 追加: 1分ごとの時報 ---
+            if (remainingSec > 0 && remainingSec % 60 === 0 && lastHatsuBeepSec !== remainingSec) {
+                playShortBeep(); // ピッ
+                lastHatsuBeepSec = remainingSec;
+            }
+
+            if(remainingSec < 30) {
+                danger = true;
+                // --- 追加: 設定が1分以上の場合のみ30秒前通知 ---
+                if(!hasWarned30SecHatsu && remainingSec > 0) { 
+                    if(hatsuLimitMinutes >= 1.0) { // 1分未満の設定なら言わない
+                        speakText("はつこめ、30秒前"); 
+                    }
+                    hasWarned30SecHatsu = true; 
+                }
+            }
+            if (remainingSec <= -10) { finishSession("終了：初コメ時間切れ"); return; }
+        }
+        if (useDousetsu) {
+            const th = parseInt(document.getElementById('resetViewerThreshold').value);
+            const dousetsuLimitMinutes = parseFloat(document.getElementById('resetDurationMinutes').value);
+            const dousetsuLimitMs = dousetsuLimitMinutes * 60 * 1000;
+            if (sessionData.currentViewers <= th) {
+                if (!dousetsuDropStartTime) dousetsuDropStartTime = now;
+                const elapsed = now - dousetsuDropStartTime;
+                const remainingMs = dousetsuLimitMs - elapsed;
+                const remainingSec = Math.ceil(remainingMs / 1000);
+                if ([30, 10, 5, -5].includes(remainingSec)) {
+                    if (lastDousetsuCheckSec !== remainingSec) {
+                        if(!isDemo) updateStatsSingle(); 
+                        lastDousetsuCheckSec = remainingSec;
+                    }
+                }
+                updateTimerUI('dousetsu', remainingSec);
+                
+                // --- 追加: 1分ごとの時報 ---
+                if (remainingSec > 0 && remainingSec % 60 === 0 && lastDousetsuBeepSec !== remainingSec) {
+                    playShortBeep(); // ピッ
+                    lastDousetsuBeepSec = remainingSec;
+                }
+
+                if(remainingSec < 30) {
+                    danger = true;
+                    // --- 追加: 設定が1分以上の場合のみ30秒前通知 ---
+                    if(!hasWarned30SecDousetsu && remainingSec > 0) { 
+                        if(dousetsuLimitMinutes >= 1.0) { // 1分未満の設定なら言わない
+                            speakText("同接維持、30秒前"); 
+                        }
+                        hasWarned30SecDousetsu = true; 
+                    }
+                }
+                if (remainingSec <= -10) { finishSession("終了：同接低下"); return; }
+            } else {
+                dousetsuDropStartTime = null;
+                hasWarned30SecDousetsu = false;
+                updateTimerUI('dousetsu', dousetsuLimitMinutes * 60);
+            }
+        }
+        const scoreEl = document.getElementById('totalPoints');
+        if (danger) {
+            scoreEl.classList.add('danger-text', 'blink-anim');
+            document.getElementById('conditionStatusText').innerText = "⚠️ 終了条件に接近中...";
+            document.getElementById('conditionStatusText').style.color = "#e74c3c";
+        } else {
+            scoreEl.classList.remove('danger-text', 'blink-anim');
+        }
+    }
+    
+    function updateTimerUI(type, seconds) {
+        const timeEl = document.getElementById(`${type}-time`);
+        const msgEl = document.getElementById(`${type}-msg`);
+        const absSeconds = Math.abs(seconds);
+        const m = Math.floor(absSeconds / 60).toString().padStart(2, '0');
+        const s = Math.floor(absSeconds % 60).toString().padStart(2, '0');
+        const sign = seconds < 0 ? "-" : "";
+        timeEl.innerText = `${sign}${m}:${s}`;
+
+        if (seconds < 30) {
+            timeEl.classList.add('danger-text', 'blink-anim');
+            if (!msgEl.classList.contains('pop-msg')) {
+                if (seconds < 0) msgEl.innerText = "終了まであと少し...";
+                else msgEl.innerText = "粘って！！";
+            }
+        } else {
+            timeEl.classList.remove('danger-text', 'blink-anim');
+            if (!msgEl.classList.contains('pop-msg')) {
+                msgEl.innerText = (type === 'hatsu') ? "コメント待ち..." : "維持してね！";
+            }
+        }
+    }
+
     function manualHatsuAction() {
         if(!isTracking) return;
-        sessionData.manualFirstComments++; lastManualFirstActionTime=Date.now();
-        lastHatsuSec = 9999; // リセット時に前回の秒数をクリアして、いきなり30秒通知が出ないようにする
-        speakText("はつこめ、ありがとうございます");
-        const m=document.getElementById('hatsu-msg'); m.innerText="Thank you!"; setTimeout(()=>m.innerText="待ち...",3000);
+        sessionData.manualFirstComments++; 
+        lastManualFirstActionTime = Date.now();
+        hasWarned30SecHatsu = false;
+        const msgEl = document.getElementById('hatsu-msg');
+        msgEl.innerText = "ありがとうございます。\nゆっくり見ていってくださいね。";
+        msgEl.classList.add('pop-msg');
+        setTimeout(() => { msgEl.classList.remove('pop-msg'); }, 5000);
+        speakText("はつこめ、ありがとうございます。ゆっくりしていってくださいね。");
     }
-    function adjustSub(n){ if(isTracking) sessionData.currentSubCount+=n; }
-    function adjustFirst(n){ if(isTracking) sessionData.manualFirstComments = Math.max(0, sessionData.manualFirstComments+n); }
-    function stopTrackingManual(){ finishSession("手動停止"); }
-    function finishSession(reason){
-        if(!isTracking) return; isTracking=false; isFinishing=true; clearInterval(checkInterval);
-        document.body.classList.remove('tracking');
-        document.getElementById('subManualControls').style.display='none';
-        document.getElementById('statusBox').className="status-bar";
-        document.getElementById('statusBox').innerText="終了！おつかれ！";
-        speakText("終了です。おつかれさまでした。");
-        saveHistory({points:Math.round(visualState.totalPoints), reason:reason, time:new Date().toLocaleTimeString()});
-        updateVisibility();
-    }
-    function calculatePoints(){
-        const s=parseInt(document.getElementById('ptSub').value), f=parseInt(document.getElementById('ptFirst').value), c=parseInt(document.getElementById('ptComm').value);
-        return (Math.max(0,sessionData.currentSubCount-sessionData.startSubCount)*s) + (sessionData.manualFirstComments*f) + (sessionData.totalComments*c);
-    }
-    function lerp(s,e,f){ return s+(e-s)*f; }
-    function getApiKeys(){ return document.getElementById('apiKey').value.split(/[\n,]+/).filter(k=>k.trim()); }
-    function getNextApiKey(){ const k=getApiKeys(); if(!k.length) throw new Error("Keyなし"); return k[currentKeyIndex++ % k.length]; }
-    function extractVideoId(u){ const m=u.match(/v=([^#&?]*)/); return m?m[1]:""; }
-    async function fetchVideo(id,k){ const r=await fetch(`https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails,snippet&id=${id}&key=${k}`); return (await r.json()).items[0]; }
-    async function fetchComments(k){ /* 簡略化 */ sessionData.totalComments += isDemo ? 1 : 0; } // 実際はAPI実装が必要
-    async function fetchChannel(id,k){ const r=await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${id}&key=${k}`); return (await r.json()).items[0]; }
+    window.manualHatsuAction = manualHatsuAction;
 
-    // デモ用シミュレータ
-    async function demoSimulate(){
-        const oldV = sessionData.currentViewers;
-        sessionData.currentViewers += Math.floor(Math.random()*5)-2;
-        if(sessionData.currentViewers<0) sessionData.currentViewers=0;
-        checkViewerAlerts(oldV, sessionData.currentViewers);
-        if(Math.random()>0.7) sessionData.totalComments++;
+    window.adjustFirst = function(amount) {
+        if(!isTracking) return;
+        sessionData.manualFirstComments += amount;
+        if (sessionData.manualFirstComments < 0) sessionData.manualFirstComments = 0;
+    };
+    
+    window.adjustSub = function(amount) { if(!isTracking) return; sessionData.currentSubCount += amount; }; 
+
+    async function demoSimulate() {
+        const add = Math.floor(Math.random() * 4);
+        if(add > 0) { sessionData.totalComments += add; lastCommentReceivedTime = Date.now(); }
+        let d = new Date();
+        let h = d.getHours();
+        let m = d.getMinutes().toString().padStart(2, '0');
+        let dispH = h.toString().padStart(2, '0');
+        document.getElementById('lastCommTime').innerText = `${dispH}:${m}`;
+        sessionData.currentViewers += Math.floor(Math.random() * 5) - 2; 
+        if(sessionData.currentViewers < 0) sessionData.currentViewers = 0;
+        if(!isManualSub && Math.random() > 0.8) sessionData.currentSubCount += 1;
     }
 
-    // 履歴
-    function saveHistory(r){ let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); h.push(r); localStorage.setItem(HISTORY_KEY,JSON.stringify(h)); renderHistory(); }
-    function renderHistory(){
-        let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); const t=document.querySelector('#historyTable tbody'); t.innerHTML="";
-        h.reverse().forEach((i,x)=>t.innerHTML+=`<tr><td>${h.length-x}</td><td style="font-weight:bold;color:#e84393">${i.points}</td><td>${i.time}</td><td>${i.reason}</td></tr>`);
+    async function finishSession(reason) {
+        if(!isTracking || isFinishing) return; 
+        isFinishing = true; 
+        if(checkInterval) clearInterval(checkInterval);
+        
+        // --- 修正: finallyブロックを使ってエラー時でも確実にボタンを復帰させる ---
+        try {
+            if(channelId) {
+                let mem = JSON.parse(localStorage.getItem(CHANNEL_MEM_KEY) || "{}");
+                const durationMin = (Date.now() - sessionData.startTime) / 60000;
+                const cpm = Math.round(sessionData.totalComments / (durationMin || 1));
+                mem[channelId] = Math.max(mem[channelId] || 0, cpm);
+                localStorage.setItem(CHANNEL_MEM_KEY, JSON.stringify(mem));
+            }
+            setStatus("📊 最終集計中...", "warning");
+            if(!isDemo) {
+                try {
+                    await updateStatsSingle();
+                    const key = getNextApiKey();
+                    await fetchComments(key);
+                    if(!isManualSub) {
+                        const key2 = getNextApiKey();
+                        const c = await fetchChannelDetails(channelId, key2); 
+                        sessionData.currentSubCount = parseInt(c.statistics.subscriberCount);
+                    }
+                } catch(e) { console.error("最終集計エラー:", e); }
+            }
+        } finally {
+            // ボタン状態のリセット処理をここに移動
+            document.getElementById('btnStart').style.display = 'block';
+            document.getElementById('btnStop').style.display = 'none';
+            
+            isTracking = false; 
+            document.body.classList.remove('tracking');
+            document.getElementById('subManualControls').style.display = 'none';
+            document.getElementById('btnStart').innerText = "🚀 計測スタート！";
+            document.getElementById('btnStart').style.opacity = "1";
+            document.getElementById('statusBox').innerText = "👋 設定を入力してね";
+            document.getElementById('statusBox').className = "status-bar";
+        }
+
+        visualState.totalPoints = calculatePoints();
+        visualState.subCount = sessionData.currentSubCount;
+        visualState.totalComments = sessionData.totalComments;
+        const pt = calculatePoints();
+        const rec = { id: Date.now(), points: pt, startTime: sessionData.startTime.toLocaleString(), endTime: new Date().toLocaleString(), subDiff: Math.max(0, sessionData.currentSubCount - sessionData.startSubCount), firstComments: sessionData.manualFirstComments, totalComments: sessionData.totalComments, reason: reason };
+        saveToHistory(rec); setStatus(`終了！結果: ${pt} pt`, "");
+        speakText("計測を終了しました。おつかれい！！");
+        alert(`おつかれさま！\n理由: ${reason}\n結果: ${pt} pt\n(現在の同接: ${sessionData.currentViewers}人 で集計しました)`); 
+        updateSessionInfo();
     }
-    function clearHistory(){ localStorage.removeItem(HISTORY_KEY); renderHistory(); }
-    function checkInputs(){ /*省略*/ }
-    function previewVideo(){ /*省略*/ }
-    function toggleObs(){ document.body.classList.toggle('obs-mode'); }
+    
+    function calculatePoints() {
+        const s = parseInt(document.getElementById('ptSub').value), f = parseInt(document.getElementById('ptFirst').value), c = parseInt(document.getElementById('ptComm').value);
+        const diff = Math.max(0, sessionData.currentSubCount - sessionData.startSubCount);
+        return (diff * s) + (sessionData.manualFirstComments * f) + (sessionData.totalComments * c);
+    }
+
+    async function fetchVideoDetails(vid, key) {
+        addKeyUsage(key, 1);
+        const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails,snippet&id=${vid}&key=${key}`);
+        if (!res.ok) throw new Error(`APIエラー: ${res.status}`);
+        const data = await res.json(); 
+        if (data.error) throw new Error(data.error.message); 
+        return data.items[0];
+    }
+    async function fetchChannelDetails(cid, key) {
+        addKeyUsage(key, 1);
+        const res = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${cid}&key=${key}`);
+        if (!res.ok) throw new Error(`APIエラー: ${res.status}`);
+        const data = await res.json(); return data.items[0];
+    }
+    async function fetchComments(key) {
+        addKeyUsage(key, 5);
+        let url = `https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId=${liveChatId}&part=id&key=${key}&maxResults=2000`;
+        if (nextPageToken) url += `&pageToken=${nextPageToken}`;
+        const res = await fetch(url); 
+        if (!res.ok) throw new Error(`APIエラー: ${res.status}`);
+        const data = await res.json();
+        let d = new Date();
+        let h = d.getHours();
+        let m = d.getMinutes().toString().padStart(2, '0');
+        let dispH = h.toString().padStart(2, '0');
+        document.getElementById('lastCommTime').innerText = `${dispH}:${m}`;
+        let count = 0;
+        if (data.items && data.items.length > 0) { 
+            count = data.items.length;
+            sessionData.totalComments += count; 
+            lastCommentReceivedTime = Date.now(); 
+        }
+        if (data.nextPageToken) nextPageToken = data.nextPageToken; 
+        if (data.pollingIntervalMillis) youtubeSuggestedInterval = data.pollingIntervalMillis;
+        return count;
+    }
+    
+    function validateInputs(){ if(!document.getElementById('apiKey').value && !document.getElementById('demoModeCheck').checked){ alert("APIキーを入力してください"); return false; } if(!document.getElementById('url').value && !document.getElementById('demoModeCheck').checked){ alert("URLを入力してください"); return false; } return true; }
+    function updateSessionInfo() {
+        let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+        document.getElementById('challengeCount').innerText = `${h.length + 1}回目`;
+        document.getElementById('prevScore').innerText = h.length > 0 ? h[h.length - 1].points.toLocaleString() : "--";
+    }
+    function saveToHistory(r) { let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); h.push(r); localStorage.setItem(HISTORY_KEY,JSON.stringify(h)); renderHistory(); }
+    function renderHistory() {
+        let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); const tb=document.querySelector('#historyTable tbody'); tb.innerHTML="";
+        h.slice().reverse().forEach((i,x)=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${h.length-x}</td><td style="font-weight:900;color:#e84393;">${i.points}</td><td>${i.startTime}</td><td>${i.endTime}</td><td>+${i.subDiff}</td><td>${i.firstComments}</td><td>${i.totalComments}</td><td>${i.reason}</td>`; tb.appendChild(tr); });
+    }
+    window.clearHistory = function(){ if(confirm("履歴を削除しますか？")){ localStorage.removeItem(HISTORY_KEY); renderHistory(); updateSessionInfo(); } };
+    window.downloadCSV = function(){
+        let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); if(h.length==0)return alert("履歴なし");
+        let c="\uFEFF回数,pt,開始,終了,登録増,初コメ,コメ数,理由\n";
+        h.forEach((i,x)=>c+=`${x+1},${i.points},${i.startTime},${i.endTime},${i.subDiff},${i.firstComments},${i.totalComments},${i.reason}\n`);
+        const l=document.createElement("a"); l.href=URL.createObjectURL(new Blob([c],{type:"text/csv;charset=utf-8;"})); l.download="history.csv"; l.click();
+    };
+    
+    // --- Initial audio setup on click ---
+    document.addEventListener('click', () => {
+         if(!audioCtx) initAudio();
+         else if(audioCtx.state === 'suspended') audioCtx.resume();
+    }, {once:true});
+    
+    function setStatus(msg, type) {
+        const bar = document.getElementById('statusBox'); bar.innerText = msg; bar.className = 'status-bar';
+        if(type==='active') bar.classList.add('status-ok');
+        if(type==='warning') bar.classList.add('status-warn');
+        if(type==='demo') bar.classList.add('status-demo');
+        if(type==='grace') bar.classList.add('status-grace');
+    }
+    
+    function initAudio() {
+        if (!audioCtx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    // --- 追加: 短いビープ音 (1分毎の時報用) ---
+    function playShortBeep() {
+        if (!document.getElementById('soundEnabled').checked) return;
+        initAudio();
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1000, audioCtx.currentTime); 
+        osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.1); // ピッ
+        
+        const vol = parseFloat(document.getElementById('volumeSlider').value);
+        gainNode.gain.setValueAtTime(vol * 0.3, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1);
+    }
+
+    function playVolumeTest() {
+        if (!document.getElementById('soundEnabled').checked) return;
+        initAudio();
+        
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime); // ピー音
+        osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.5);
+        
+        const vol = parseFloat(document.getElementById('volumeSlider').value);
+        gainNode.gain.setValueAtTime(vol * 0.5, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+        
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.5);
+    }
+
+    // --- 修正: 読み上げ中断機能付き ---
+    function speakText(text) {
+        if (!document.getElementById('soundEnabled').checked) return;
+        if ('speechSynthesis' in window) {
+            // 前の発言をキャンセルして即座に次の言葉を話す
+            window.speechSynthesis.cancel();
+            
+            const uttr = new SpeechSynthesisUtterance(text);
+            uttr.volume = parseFloat(document.getElementById('volumeSlider').value);
+            uttr.rate = 1.2;
+            uttr.pitch = 1.0;
+            uttr.lang = "ja-JP";
+            window.speechSynthesis.speak(uttr);
+        }
+    }
+
+    document.getElementById('volumeSlider').addEventListener('input', function(e) {
+        const val = Math.round(e.target.value * 100);
+        document.getElementById('volValue').innerText = val + "%";
+    });
+
 </script>
 </body>
 </html>
