@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (Final Fix v2)</title>
+    <title>耐久カウンター Jewel Ocean (Layout Restored & Fixed)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -174,7 +174,7 @@
         <div style="display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap;">
             <div class="input-group" style="flex:1; background:#fff3e0; padding:12px; border-radius:16px; border:1px solid #ffeaa7; margin-bottom:0; min-width:200px;">
                 <label style="margin-bottom:0; cursor:pointer; font-size:0.95rem;">
-                    <input type="checkbox" id="demoModeCheck" style="width:18px; height:18px; vertical-align:middle;">
+                    <input type="checkbox" id="demoModeCheck" style="width:18px; height:18px; vertical-align:middle;" onchange="checkInputs()">
                     <span style="vertical-align:middle; color:#d35400;">🧪 <b>デモモード</b> (API消費なし)</span>
                 </label>
             </div>
@@ -206,11 +206,11 @@
             <div>
                 <div class="input-group">
                     <label>📺 YouTube URL</label>
-                    <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=..." oninput="predictApiCountFromUrl(); calculateSafeIntervals()">
+                    <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=..." oninput="checkInputs(); predictApiCountFromUrl();">
                 </div>
                 <div class="input-group">
                     <label>🔑 APIキー (複数可)</label>
-                    <textarea id="apiKey" placeholder="AIzaSy...&#13;&#10;AIzaSy...&#13;&#10;(STARTで非表示になります)" oninput="predictApiCountFromUrl(); calculateSafeIntervals()"></textarea>
+                    <textarea id="apiKey" placeholder="AIzaSy...&#13;&#10;AIzaSy...&#13;&#10;(STARTで非表示になります)" oninput="checkInputs(); calculateSafeIntervals()"></textarea>
                     <button class="btn-eye" onclick="toggleApiVisibility()" title="表示/非表示">👁️</button>
                 </div>
             </div>
@@ -219,18 +219,20 @@
         <h3 style="color:var(--text-sub); border-bottom:1px solid #eee; padding-bottom:5px; margin-top:20px;">🛑 終了・リセット条件 (マルチタスク)</h3>
         <div class="condition-box">
             <div class="condition-row">
-                <label class="cond-label"><input type="checkbox" id="cond_goal_viewers"> (2) 同接ゴール停止</label>
+                <label class="cond-label"><input type="checkbox" id="cond_goal_viewers"> (1) 同接ゴール停止</label>
                 <span>：同接が <input type="number" id="val_goal_viewers" value="10000"> 人以上でSTOP</span>
             </div>
             <div class="condition-row">
-                <label class="cond-label"><input type="checkbox" id="cond_goal_subs"> (3) 登録者ゴール停止</label>
+                <label class="cond-label"><input type="checkbox" id="cond_goal_subs"> (2) 登録者ゴール停止</label>
                 <span>：登録者が <input type="number" id="val_goal_subs" value="100000"> 人以上でSTOP</span>
             </div>
             <div class="condition-row">
-                <label class="cond-label"><input type="checkbox" id="cond_limit_comments"> (6) コメント数上限</label>
+                <label class="cond-label"><input type="checkbox" id="cond_limit_comments"> (3) コメント数上限</label>
                 <span>：合計 <input type="number" id="val_limit_comments" value="1000"> 件でSTOP</span>
             </div>
+            
             <hr style="width:100%; border:0; border-top:1px dashed #ccc; margin:10px 0;">
+            
             <div class="condition-row">
                 <label class="cond-label" style="color:#e84393;"><input type="checkbox" id="cond_no_first" checked> (4) 初コメ耐久タイマー</label>
                 <span>：<input type="number" id="val_no_first_min" value="2" step="0.1" style="width:50px"> 分間、初コメがないと終了</span>
@@ -321,8 +323,8 @@
         </div>
         
         <div class="control-area">
-            <button class="btn-start" onclick="startTracking()">🚀 計測スタート！</button>
-            <button class="btn-stop" onclick="stopTrackingManual()">⛔ 計測ストップ (集計して終了)</button>
+            <button id="btnStart" class="btn-start" onclick="startTracking()">🚀 計測スタート！</button>
+            <button id="btnStop" class="btn-stop" onclick="stopTrackingManual()">⛔ 計測ストップ (集計して終了)</button>
         </div>
 
         <div class="sound-setting">
@@ -331,7 +333,7 @@
             </label>
             <div class="volume-control">
                 <span style="font-size:0.85rem; color:var(--text-sub);">音量</span>
-                <input type="range" id="volumeSlider" min="0" max="1.5" step="0.05" value="0.5">
+                <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="0.5">
                 <span id="volValue" style="font-size:0.9rem; font-weight:bold; color:var(--accent-color); width: 45px;">50%</span>
             </div>
             <button class="btn-test" onclick="playVolumeTest()">🔊 テスト</button>
@@ -355,7 +357,7 @@
 <div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li><li>※複数アカウントで作成したキーを入力すると制限が緩和されます！</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;">閉じる</button></div></div>
 
 <script>
-    const HISTORY_KEY = "yt_endurance_v36_pt_final", QUOTA_KEY_PREFIX = "yt_api_usage_", CHANNEL_MEM_KEY = "yt_channel_speed_mem";
+    const HISTORY_KEY = "yt_endurance_v4_fixed", QUOTA_KEY_PREFIX = "yt_api_usage_", CHANNEL_MEM_KEY = "yt_channel_speed_mem";
     const NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
     
     // Global variables
@@ -545,6 +547,7 @@
              displayEl.innerText = `固定設定: ${recInterval.toFixed(1)}s (1日上限: ${totalBudget}pt)`;
              displayEl.style.color = "#00b894"; 
         }
+        
         displayApiQuota();
     };
 
@@ -844,6 +847,25 @@
         return start + (diff * factor);
     }
     
+    window.checkInputs = function() {
+        const url = document.getElementById('url').value;
+        const key = document.getElementById('apiKey').value;
+        const demo = document.getElementById('demoModeCheck').checked;
+        const status = document.getElementById('statusBox');
+        
+        if(demo) {
+            status.innerHTML = "🧪 デモモード中 (API不使用)";
+            status.className = "status-bar status-demo";
+        } else if(url && key) {
+            status.innerHTML = "✅ 準備OK！スタートを押してね";
+            status.className = "status-bar status-ok";
+        } else {
+            status.innerHTML = "👋 設定を入力してね";
+            status.className = "status-bar";
+        }
+        calculateSafeIntervals();
+    };
+
     function checkConditionsAndTimer() {
         if(!isTracking) return; 
         const now = Date.now();
@@ -925,13 +947,36 @@
         }
     }
     
+    function updateTimerUI(type, seconds) {
+        const timeEl = document.getElementById(`${type}-time`);
+        const msgEl = document.getElementById(`${type}-msg`);
+        const absSeconds = Math.abs(seconds);
+        const m = Math.floor(absSeconds / 60).toString().padStart(2, '0');
+        const s = Math.floor(absSeconds % 60).toString().padStart(2, '0');
+        const sign = seconds < 0 ? "-" : "";
+        timeEl.innerText = `${sign}${m}:${s}`;
+
+        if (seconds < 30) {
+            timeEl.classList.add('danger-text', 'blink-anim');
+            if (!msgEl.classList.contains('pop-msg')) {
+                if (seconds < 0) msgEl.innerText = "終了まであと少し...";
+                else msgEl.innerText = "粘って！！";
+            }
+        } else {
+            timeEl.classList.remove('danger-text', 'blink-anim');
+            if (!msgEl.classList.contains('pop-msg')) {
+                msgEl.innerText = (type === 'hatsu') ? "コメント待ち..." : "維持してね！";
+            }
+        }
+    }
+
     function manualHatsuAction() {
         if(!isTracking) return;
         sessionData.manualFirstComments++; 
         lastManualFirstActionTime = Date.now();
         hasWarned30SecHatsu = false;
         const msgEl = document.getElementById('hatsu-msg');
-        msgEl.innerText = "初コメありがとうございます。\nゆっくり見ていってくださいね。";
+        msgEl.innerText = "ありがとうございます。\nゆっくり見ていってくださいね。";
         msgEl.classList.add('pop-msg');
         setTimeout(() => { msgEl.classList.remove('pop-msg'); }, 5000);
         speakText("はつこめ、ありがとうございます。ゆっくりしていってくださいね。");
@@ -986,6 +1031,14 @@
         isTracking = false; 
         document.body.classList.remove('tracking');
         document.getElementById('subManualControls').style.display = 'none';
+        
+        document.getElementById('btnStart').style.display = 'block';
+        document.getElementById('btnStart').innerText = "🚀 計測スタート！";
+        document.getElementById('btnStart').style.opacity = "1";
+        document.getElementById('btnStop').style.display = 'none';
+        document.getElementById('statusBox').innerText = "👋 設定を入力してね";
+        document.getElementById('statusBox').className = "status-bar";
+
         visualState.totalPoints = calculatePoints();
         visualState.subCount = sessionData.currentSubCount;
         visualState.totalComments = sessionData.totalComments;
