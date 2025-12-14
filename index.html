@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (PT Logic Ver)</title>
+    <title>耐久カウンター Jewel Ocean (Final Fix)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -40,6 +40,8 @@
         .input-group label { display: block; font-weight: 700; font-size: 1.05rem; margin-bottom: 8px; color: var(--text-main); }
         .input-group input { width: 100%; padding: 16px; font-size: 1.1rem; border: 2px solid #dfe6e9; border-radius: 16px; background: rgba(255,255,255,0.9); transition: 0.3s; font-family: inherit; box-sizing: border-box; }
         .input-group input:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.2); }
+        .input-group input[readonly] { background-color: #f1f2f6; color: #b2bec3; cursor: not-allowed; border-color: #f1f2f6; }
+        
         .input-group textarea { width: 100%; padding: 16px; padding-right: 50px; font-size: 0.95rem; border: 2px solid #dfe6e9; border-radius: 16px; background: rgba(255,255,255,0.9); font-family: "Roboot Mono", monospace; box-sizing: border-box; height: 100px; resize: vertical; line-height: 1.4; }
         .input-group textarea:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.2); }
         
@@ -143,7 +145,13 @@
         body.obs-mode .bubbles, body.obs-mode .setting-wrap, body.obs-mode .history-wrap, body.obs-mode .status-bar { display: none; }
         body.obs-mode .obs-toggle { position: fixed; top: 10px; right: 10px; opacity: 0.2; transition: opacity 0.3s; }
         body.obs-mode .obs-toggle:hover { opacity: 1; }
-        body.obs-mode .glass-card.score-card { margin: 0; border: 6px solid var(--accent-color); background: rgba(255,255,255,0.95); }
+        
+        /* OBSモード時のカード調整: 上に余白を追加 */
+        body.obs-mode .glass-card.score-card { 
+            margin: 40px auto 0 auto; /* 上に40pxの余白を追加 */
+            border: 6px solid var(--accent-color); 
+            background: rgba(255,255,255,0.95); 
+        }
         
         .status-bar { padding: 16px; background: #fff; border-radius: 16px; text-align: center; font-weight: bold; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .status-ok { color: #00b894; border: 2px solid #00b894; background: #edfbf7; }
@@ -229,7 +237,7 @@
                 <div class="input-group">
                     <label>🛡️ 更新間隔 (Auto)</label>
                     <div style="display:flex; gap:10px; align-items:center;">
-                        <input type="number" id="minIntervalSeconds" value="5" step="0.1" min="0.1" oninput="calculateSafeIntervals()" style="width:80px;">
+                        <input type="number" id="minIntervalSeconds" value="5" step="0.1" min="0.1" readonly style="width:80px;">
                         <label style="font-size:0.85rem; cursor:pointer; color:#6c5ce7; font-weight:bold;">
                             <input type="checkbox" id="autoSpeedCheck" checked onchange="calculateSafeIntervals()"> ⚡ AI自動変速
                         </label>
@@ -240,7 +248,7 @@
             <div>
                 <div class="input-group">
                     <label>📺 YouTube URL</label>
-                    <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=...">
+                    <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=..." oninput="calculateSafeIntervals()">
                 </div>
                 <div class="input-group">
                     <label>🔑 APIキー (複数可)</label>
@@ -470,13 +478,9 @@
     }
 
     function checkDstAndDisplayResetTime() {
-        // PT reset is fixed to 0:00 PT. Converted to JST, it's 16:00 or 17:00 depending on DST.
-        // This function just visualizes when the reset happens in local time.
         const now = new Date();
-        // Simple heuristic: If we are in summer (approx), diff is -7h, else -8h from UTC.
-        // JST is +9. So reset is at 16:00 (Summer) or 17:00 (Winter).
         const m = now.getMonth();
-        const isDst = (m > 2 && m < 10); // Rough check
+        const isDst = (m > 2 && m < 10); 
         const resetHour = isDst ? 16 : 17;
         document.getElementById('apiResetTimeDisplay').innerText = `${resetHour}:00`;
         return resetHour;
@@ -505,6 +509,17 @@
         let total = 0;
         getApiKeys().forEach(key => total += getKeyUsage(key));
         return total;
+    }
+
+    // ★★★ 不足していた関数を追加しました ★★★
+    function checkQuotaSafe() {
+        if(document.getElementById('demoModeCheck').checked) return true;
+        const keys = getApiKeys();
+        if(keys.length === 0) return false;
+        
+        // シンプルなチェック: 全キー合計で上限を超えていないか
+        const limit = keys.length * 10000;
+        return getTotalQuotaUsed() < limit;
     }
 
     function getApiKeys() {
@@ -578,19 +593,25 @@
         // Display
         const isAuto = document.getElementById('autoSpeedCheck').checked;
         const displayEl = document.getElementById('chatIntervalDisplay');
+        const inputEl = document.getElementById('minIntervalSeconds');
         
         let minReqKeys = 0;
         if (isAuto) {
-             // For AI, assume higher consumption (e.g., 2000 fetches/hr for busy stream)
-             // 1 key = ~2000 fetches total. So 1 key per hour.
-             minReqKeys = Math.ceil(parseFloat(document.getElementById('targetHours').value) / 4); // Very rough safe estimate for busy stream
+             // AI Mode: Hide input
+             inputEl.style.display = 'none';
+
+             // Description
+             minReqKeys = Math.ceil(parseFloat(document.getElementById('targetHours').value) / 4); 
              displayEl.innerText = `目安: 自動制御\n(激流耐久ならキー${minReqKeys}個推奨)`;
              displayEl.style.color = "#6c5ce7";
         } else {
-             displayEl.innerText = `推奨: ${recInterval.toFixed(1)}s (1日上限: ${totalBudget}pt)`;
-             const currentVal = parseFloat(document.getElementById('minIntervalSeconds').value);
-             if (currentVal < recInterval) displayEl.style.color = "#d63031"; // Warning
-             else displayEl.style.color = "#00b894"; 
+             // Manual Mode: Show input, Set Value, Lock it
+             inputEl.style.display = 'inline-block';
+             inputEl.value = recInterval.toFixed(1);
+             inputEl.readOnly = true;
+
+             displayEl.innerText = `固定設定: ${recInterval.toFixed(1)}s (1日上限: ${totalBudget}pt)`;
+             displayEl.style.color = "#00b894"; 
         }
         
         displayApiQuota();
@@ -651,6 +672,7 @@
 
     function toggleObs() {
         document.body.classList.toggle('obs-mode');
+        // OBSモード時は背景画像を消す
         document.body.style.backgroundImage = document.body.classList.contains('obs-mode') ? 'none' : '';
     }
     function openModal() { document.getElementById('helpModal').style.display = 'flex'; }
@@ -704,9 +726,12 @@
         if(!document.getElementById('demoModeCheck').checked && apiKeys.length === 0) {
             alert("APIキーを入力してください"); return;
         }
+        
+        // Fixed: Check quota existence first
         if (!checkQuotaSafe()) {
             alert("本日のAPI使用上限に達しているため開始できません。\n(キーを追加するか、太平洋時間 0時 までお待ちください)"); return;
         }
+        
         initAudio(); // Explicit audio resume
         isDemo = document.getElementById('demoModeCheck').checked;
         isManualSub = document.getElementById('manualSubCheck').checked;
@@ -735,6 +760,10 @@
             lastCommentReceivedTime = Date.now(); 
             nextApiPollingMs = 0;
             currentPollingInterval = parseFloat(document.getElementById('minIntervalSeconds').value) * 1000;
+            
+            // Safety fallback for interval
+            if(isNaN(currentPollingInterval) || currentPollingInterval < 500) currentPollingInterval = 5000;
+            
             lastFetchTime = Date.now(); 
             
             if(!isDemo && channelId) {
@@ -928,8 +957,8 @@
             if (remaining <= 100) {
                 const tenDigit = Math.floor(remaining / 10);
                 if (lastCommentCountWarn !== tenDigit) {
-                     speakText(`あと、${remaining}件です`);
-                     lastCommentCountWarn = tenDigit;
+                      speakText(`あと、${remaining}件です`);
+                      lastCommentCountWarn = tenDigit;
                 }
             }
             if (remaining <= 20) danger = true;
@@ -1029,7 +1058,7 @@
         hasWarned30SecHatsu = false;
         
         const msgEl = document.getElementById('hatsu-msg');
-        msgEl.innerText = "初コメありがとうございます。"はコメありがとうございます。\nゆ;
+        msgEl.innerText = "初コメありがとうございます。\nゆっくり見ていってくださいね。";
         msgEl.classList.add('pop-msg');
         
         setTimeout(() => {
@@ -1184,4 +1213,4 @@
     }
 </script>
 </body>
-</html>
+    </html>
