@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (Layout Restored & Fixed)</title>
+    <title>耐久カウンター Jewel Ocean (Layout Restored & Fixed2)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -1125,6 +1125,62 @@
         if(type==='demo') bar.classList.add('status-demo');
         if(type==='grace') bar.classList.add('status-grace');
     }
+    // ▼▼▼▼▼ ここから追加コード ▼▼▼▼▼
+
+    // 1. オーディオ初期化関数 (これが無かったためスタートできませんでした)
+    function initAudio() {
+        if (!audioCtx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AudioContext();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    // 2. 音量テスト関数 (これが無かったためテストボタンが無反応でした)
+    function playVolumeTest() {
+        if (!document.getElementById('soundEnabled').checked) return;
+        initAudio();
+        
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime); // ピー音
+        osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.5);
+        
+        const vol = parseFloat(document.getElementById('volumeSlider').value);
+        gainNode.gain.setValueAtTime(vol * 0.5, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+        
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.5);
+    }
+
+    // 3. 読み上げ関数 (これが無いとカウントダウンなどでエラーになります)
+    function speakText(text) {
+        if (!document.getElementById('soundEnabled').checked) return;
+        if ('speechSynthesis' in window) {
+            const uttr = new SpeechSynthesisUtterance(text);
+            uttr.volume = parseFloat(document.getElementById('volumeSlider').value);
+            uttr.rate = 1.2;
+            uttr.pitch = 1.0;
+            uttr.lang = "ja-JP";
+            window.speechSynthesis.speak(uttr);
+        }
+    }
+
+    // 4. 音量スライダーの数値表示更新
+    document.getElementById('volumeSlider').addEventListener('input', function(e) {
+        const val = Math.round(e.target.value * 100);
+        document.getElementById('volValue').innerText = val + "%";
+    });
+
+    // ▲▲▲▲▲ 追加コードここまで ▲▲▲▲▲
 </script>
 </body>
 </html>
