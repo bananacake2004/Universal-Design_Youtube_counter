@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耐久カウンター Jewel Ocean (Layout Restored & Fixed2)</title>
+    <title>耐久カウンター Jewel Ocean (Complete Fixed Ver.)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -378,6 +378,8 @@
     // 追加: 1分ごとの音を鳴らすための変数
     let lastHatsuBeepSec = null;
     let lastDousetsuBeepSec = null;
+    // 追加: 同接状態管理
+    let wasDousetsuSafe = true;
 
     let sessionData = { startTime: null, startSubCount: 0, currentSubCount: 0, totalComments: 0, manualFirstComments: 0, currentViewers: 0 };
     let videoId = "", channelId = "", liveChatId = null, nextPageToken = null;
@@ -394,7 +396,6 @@
     // --- Global Functions (Defined on window) ---
     window.toggleObs = function() {
         document.body.classList.toggle('obs-mode');
-        // OBSモード時は背景画像を消す
         document.body.style.backgroundImage = document.body.classList.contains('obs-mode') ? 'none' : '';
     };
 
@@ -410,7 +411,7 @@
     window.onload = function() { 
         renderHistory(); 
         checkDstAndDisplayResetTime(); 
-        predictApiCountFromHistory(); // Initial predict
+        predictApiCountFromHistory(); 
         calculateSafeIntervals(); 
         updateSessionInfo();
         displayApiQuota(); 
@@ -439,7 +440,6 @@
             return;
         }
 
-        // キーがない場合は予測できないので、UIで通知する
         if (keys.length === 0) {
             predictionSource = "need_key";
             calculateSafeIntervals();
@@ -717,8 +717,9 @@
             hasWarned30SecDousetsu = false;
             lastCommentCountWarn = null;
             lastDousetsuCheckSec = null;
-            lastHatsuBeepSec = null;    // 追加: リセット
-            lastDousetsuBeepSec = null; // 追加: リセット
+            lastHatsuBeepSec = null;    // リセット
+            lastDousetsuBeepSec = null; // リセット
+            wasDousetsuSafe = true;     // リセット
 
             lastStatsTime = Date.now(); 
             lastCommentReceivedTime = Date.now(); 
@@ -886,6 +887,7 @@
         const useHatsu = document.getElementById('cond_no_first').checked;
         const useDousetsu = document.getElementById('cond_low_viewers').checked;
         let danger = false;
+        
         if(useGoalViewers) {
             const goalV = parseInt(document.getElementById('val_goal_viewers').value);
             const remaining = goalV - sessionData.currentViewers;
@@ -918,7 +920,7 @@
             
             // --- 追加: 1分ごとの時報 ---
             if (remainingSec > 0 && remainingSec % 60 === 0 && lastHatsuBeepSec !== remainingSec) {
-                playShortBeep(); // ピッ
+                playShortBeep();
                 lastHatsuBeepSec = remainingSec;
             }
 
@@ -926,7 +928,7 @@
                 danger = true;
                 // --- 追加: 設定が1分以上の場合のみ30秒前通知 ---
                 if(!hasWarned30SecHatsu && remainingSec > 0) { 
-                    if(hatsuLimitMinutes >= 1.0) { // 1分未満の設定なら言わない
+                    if(hatsuLimitMinutes >= 1.0) { 
                         speakText("はつこめ、30秒前"); 
                     }
                     hasWarned30SecHatsu = true; 
@@ -938,6 +940,16 @@
             const th = parseInt(document.getElementById('resetViewerThreshold').value);
             const dousetsuLimitMinutes = parseFloat(document.getElementById('resetDurationMinutes').value);
             const dousetsuLimitMs = dousetsuLimitMinutes * 60 * 1000;
+            const isNowSafe = sessionData.currentViewers > th;
+
+            // --- 追加: 状態変化の読み上げ ---
+            if (wasDousetsuSafe && !isNowSafe) {
+                speakText("どうせつ人数がもくひょうを下回りました。");
+            } else if (!wasDousetsuSafe && isNowSafe) {
+                speakText("どうせつ人数が目標を上回りました");
+            }
+            wasDousetsuSafe = isNowSafe;
+
             if (sessionData.currentViewers <= th) {
                 if (!dousetsuDropStartTime) dousetsuDropStartTime = now;
                 const elapsed = now - dousetsuDropStartTime;
@@ -953,7 +965,7 @@
                 
                 // --- 追加: 1分ごとの時報 ---
                 if (remainingSec > 0 && remainingSec % 60 === 0 && lastDousetsuBeepSec !== remainingSec) {
-                    playShortBeep(); // ピッ
+                    playShortBeep();
                     lastDousetsuBeepSec = remainingSec;
                 }
 
@@ -961,7 +973,7 @@
                     danger = true;
                     // --- 追加: 設定が1分以上の場合のみ30秒前通知 ---
                     if(!hasWarned30SecDousetsu && remainingSec > 0) { 
-                        if(dousetsuLimitMinutes >= 1.0) { // 1分未満の設定なら言わない
+                        if(dousetsuLimitMinutes >= 1.0) { 
                             speakText("同接維持、30秒前"); 
                         }
                         hasWarned30SecDousetsu = true; 
