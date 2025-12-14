@@ -990,7 +990,7 @@
     function manualHatsuAction() {
         if(!isTracking) return;
         sessionData.manualFirstComments++; lastManualFirstActionTime = Date.now(); hasWarned30SecHatsu = false; lastHatsuAlertMin = -1;
-        const msgEl = document.getElementById('hatsu-msg'); msgEl.innerText = "はつコメありがとうございます。\nゆっくり見ていってくださいね。"; msgEl.classList.add('pop-msg');
+        const msgEl = document.getElementById('hatsu-msg'); msgEl.innerText = "初コメありがとうございます。\nゆっくりしていってくださいね。"; msgEl.classList.add('pop-msg');
         setTimeout(() => { msgEl.classList.remove('pop-msg'); }, 5000);
         speakText("はつこめ、ありがとうございます。ゆっくりしていってくださいね。");
     }
