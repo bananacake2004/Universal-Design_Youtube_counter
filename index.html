@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jewel Ocean: AI-Turbo Final Fix</title>
+    <title>Jewel Ocean: AI-Eco (Burst Fix)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
     <style>
-        /* --- デザイン定義 (変更なし) --- */
         :root {
             --bg-grad-1: #a18cd1; --bg-grad-2: #fbc2eb;
             --glass-bg: rgba(255, 255, 255, 0.95); --glass-border: rgba(255, 255, 255, 0.6);
@@ -51,7 +50,6 @@
         
         .api-hidden { -webkit-text-security: disc; } 
         
-        /* AI分析ボックス */
         .ai-forecast-box { 
             margin-top: 10px; background: #f0f3ff; border: 2px dashed #6c5ce7; border-radius: 16px; padding: 16px; 
             font-size: 0.95rem; color: #2d3436; line-height: 1.6; display: none;
@@ -346,7 +344,7 @@
             <h2 style="margin:0; border:none; font-size:1.3rem;">📜 過去の履歴</h2>
             <div>
                 <button onclick="downloadCSV()" style="background:#b2bec3; padding:8px 16px; border-radius:20px; color:#fff;" type="button">CSV保存</button>
-                <button onclick="clearHistory()" style="background:#ff7675; padding:8px 16px; border-radius:20px; color:#fff; margin-left:5px;" type="button">履歴クリア</button>
+                <button onclick="clearHistory()" style="background:#ff7675; padding:8px 16px; border-radius:20px; color:#fff; margin-left:5px;" type="button">履歴クリア (データ削除)</button>
             </div>
         </div>
         <div class="table-wrap">
@@ -358,22 +356,22 @@
 <div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li><li>※複数アカウントで作成したキーを入力すると制限が緩和されます！</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;" type="button">閉じる</button></div></div>
 
 <script>
-    // --- 1. グローバル設定 & ID修正 ---
-    // APIキーのIDを元の "apiKey" に統一して不具合を解消
     const API_KEY_ELEMENT_ID = "apiKey";
-    const HISTORY_KEY = "yt_endurance_v47_fix";
+    const HISTORY_KEY = "yt_endurance_v49_fix_burst";
     const QUOTA_KEY = "yt_api_quota_pt_v1";
     const CHANNEL_TREND_KEY = "yt_channel_trends_v2";
     
-    // 定数
+    // 定数: 上限70秒
     const API_KEY_LIMIT_MS = 3000; 
     const BATCH_TARGET = 1800;
     const NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
-    const MAX_POLLING_ACTIVE = 60000; 
+    const MAX_POLLING_ACTIVE = 70000; 
+    const MAX_POLLING_IDLE = 70000;
 
-    // グローバル変数
     let isTracking = false;
     let isFinishing = false;
+    let isFirstRun = true; // 初回フラグ
+
     let currentPollingInterval = 5000; 
     let calculatedZInterval = 10000;
     let youtubeSuggestedInterval = 5000;
@@ -406,7 +404,6 @@
         displayApiQuota(); 
         updateVisibility(); 
         loadTrendsFromStorage(); 
-        // ページ読み込み時に必ず一度予測を実行
         updateForecast(); 
         requestAnimationFrame(updateVisualsLoop); 
     };
@@ -422,9 +419,7 @@
         document.getElementById('timer-dousetsu').classList.toggle('active', useDousetsu);
     }
 
-    // --- APIキー管理 (修正版) ---
     function getApiKeys() {
-        // 修正: ID "apiKey" を使用
         const el = document.getElementById(API_KEY_ELEMENT_ID);
         if(!el) return [];
         const raw = el.value;
@@ -445,17 +440,14 @@
         return key;
     }
 
-    // 上限ptの計算ロジック (Z値に応じた変動)
     function getDailyLimitPerKey(zHours) {
         if (zHours <= 6) return 9800;
         if (zHours <= 19) return 9000;
         return 8500;
     }
 
-    // --- (2) & (3) AI提案・最短表示 (Z+4) ---
     function updateForecast() {
         refreshApiKeys();
-        
         const isAi = document.getElementById('autoSpeedCheck').checked;
         const display = document.getElementById('chatIntervalDisplay');
         const box = document.getElementById('aiForecastBox');
@@ -463,29 +455,17 @@
         const h = parseFloat(document.getElementById('targetHours').value);
         if(!h || h <= 0) { display.innerText = "--"; return; }
 
-        // 未記入でも1個と仮定して計算
         const calcKeyCount = Math.max(1, apiKeys.length);
-
-        // 1. 物理限界: キー1個につき3秒
         const minPhysicalMs = API_KEY_LIMIT_MS / calcKeyCount; 
 
-        // 2. Z+4 ロジック (安全基準)
-        // 上限ptを取得
         const limitPerKey = getDailyLimitPerKey(h);
         const totalDailyLimit = limitPerKey * calcKeyCount;
-        
-        // 時間あたりの許容消費pt = 総上限 / (目標時間 + 4時間バッファ)
         const pointsPerHour = totalDailyLimit / (h + 4);
-        
-        // 間隔(秒) = (3600秒 * 1回消費pt) / 時間あたりpt
-        // ※コメント取得は1回5pt消費
         const safeIntervalSec = (3600 * 5) / pointsPerHour;
         calculatedZInterval = safeIntervalSec * 1000;
         
-        // 物理限界より速くはなれない
         if (calculatedZInterval < minPhysicalMs) calculatedZInterval = minPhysicalMs;
 
-        // --- AIによる提案ロジック ---
         let estimatedCPM = 50; 
         let maxPastCPM = 0;
         Object.values(channelTrends).forEach(hourlyAry => {
@@ -493,21 +473,17 @@
         });
         if(maxPastCPM > 0) estimatedCPM = maxPastCPM;
         
-        // 1800コメ溜まる時間(秒)
         let secondsToFill1800 = (1800 / Math.max(1, estimatedCPM)) * 60;
-        
-        // 必要キー数 (3秒ルール / 到達時間)
         let neededKeys = Math.ceil(3.0 / secondsToFill1800);
         if(neededKeys < 1) neededKeys = 1;
 
         let msg = `🤖 <b>AI分析:</b><br>`;
-        msg += `・目標: ${h}時間 (設定上限: ${limitPerKey}pt/key)<br>`;
-        msg += `・Z+4安全値: <b>${(calculatedZInterval/1000).toFixed(1)}秒</b>間隔<br>`;
+        msg += `・目標: ${h}時間 (上限${limitPerKey}pt×${calcKeyCount})<br>`;
+        msg += `・Z+4基準: <b>${(calculatedZInterval/1000).toFixed(1)}秒</b><br>`;
         msg += `・過去最大勢い: 約${Math.round(estimatedCPM)} CPM (推定)<br>`;
         
-        // キーの状態に応じたメッセージ
         if (apiKeys.length === 0) {
-             msg += `<span style="color:#e74c3c; font-weight:bold;">⚠️ キー未入力 (仮定: キー1個なら ${(calculatedZInterval/1000).toFixed(1)}s)</span>`;
+             msg += `<span style="color:#e74c3c; font-weight:bold;">⚠️ キー未入力 (仮定計算中)</span>`;
         } else if(apiKeys.length < neededKeys) {
             msg += `<span style="color:#e74c3c; font-weight:bold;">⚠️ キー不足の可能性 (推奨: ${neededKeys}個以上)</span>`;
         } else {
@@ -517,16 +493,11 @@
         box.style.display = "block";
         box.innerHTML = msg;
 
-        // --- 表示ロジック ---
-        // 最短間隔は「Z値」と「物理限界」と「YouTube提示(5s)」の中で最も安全な(長い)もの
-        // ただしユーザー要望「最短更新は(上限pt...)/(Z+4)」の計算結果を優先表示
-        
         if(isAi) {
-            display.innerHTML = `🤖 Auto: <b>${(minPhysicalMs/1000).toFixed(2)}s</b> 〜 <b>${(calculatedZInterval/1000).toFixed(1)}s</b> (Max60s)`;
+            display.innerHTML = `🤖 Auto: <b>${(minPhysicalMs/1000).toFixed(2)}s</b> 〜 <b>${(calculatedZInterval/1000).toFixed(1)}s</b> (Max70s)`;
             display.style.color = "#6c5ce7";
         } else {
-            // 固定時は Z+4 の値を表示
-            display.innerText = `🛡️ 固定設定(Z+4): ${(calculatedZInterval/1000).toFixed(1)}秒間隔`;
+            display.innerText = `🛡️ Z+4固定: ${(calculatedZInterval/1000).toFixed(1)}秒間隔`;
             display.style.color = "#00b894";
         }
         
@@ -537,7 +508,7 @@
         if (checkInterval) clearInterval(checkInterval);
         if (isTracking) return;
 
-        refreshApiKeys(); // 確実に更新
+        refreshApiKeys(); 
         
         if(!document.getElementById('demoModeCheck').checked && apiKeys.length === 0) return alert("APIキーを入力してください");
         if (!checkQuotaSafe()) return alert("API上限のため開始できません");
@@ -550,6 +521,7 @@
         document.body.classList.add('tracking');
         document.getElementById('btnStart').innerText = "接続中...";
         isTracking = true;
+        isFirstRun = true; // 初回フラグON
 
         try {
             await initSession(); 
@@ -607,13 +579,10 @@
         sessionData = { startTime: new Date(), startSubCount: initialSub, currentSubCount: initialSub, totalComments: 0, manualFirstComments: 0, currentViewers: parseInt(v.liveStreamingDetails.concurrentViewers||0) };
         nextPageToken = null;
 
-        // ■ 初期速度決定 (Z+4)
         refreshApiKeys();
-        updateForecast(); // Z値最新化
+        updateForecast(); 
         
         let startMs = calculatedZInterval;
-        
-        // 過去データ参照
         let predictedCPM = 0;
         if (channelId && channelTrends[channelId]) {
             const h = new Date().getHours();
@@ -623,7 +592,6 @@
 
         if (predictedCPM > 0) {
             const historyMs = (BATCH_TARGET / predictedCPM) * 60000;
-            // Z値と予測値の遅い方（安全側）を採用しつつ、あまりに遅すぎないように調整
             startMs = Math.max(startMs, historyMs * 0.8);
             setStatus(`📜 予測起動: ${(startMs/1000).toFixed(1)}s で開始`, "active");
         } else {
@@ -658,28 +626,40 @@
 
             const timeDiff = now - lastFetchTime; 
             lastFetchTime = now;
-            const realRatePerMs = itemCount / (timeDiff || 1);
-            const realCPM = realRatePerMs * 60000;
-            if(!isDemo && itemCount > 0) updateTrendData(Math.round(realCPM));
-
-            if(document.getElementById('autoSpeedCheck').checked) {
-                let nextTargetMs = currentPollingInterval; 
-                if (itemCount === 0) {
-                    nextTargetMs = Math.min(20000, currentPollingInterval * 1.2);
-                    setStatus(`💤 待機中 (${(nextTargetMs/1000).toFixed(1)}s)`, "grace");
-                } else {
-                    let idealMs = BATCH_TARGET / (realRatePerMs || 0.0001);
-                    const blend = (itemCount > 1800) ? 0.8 : 0.4;
-                    nextTargetMs = (currentPollingInterval * (1-blend)) + (idealMs * blend);
-                    setStatus(`🚀 調整中 (実測${Math.round(realCPM)}CPM -> 次${(nextTargetMs/1000).toFixed(1)}s)`, "active");
+            
+            // --- CPM計算 (初回はスキップ) ---
+            if (!isFirstRun && timeDiff > 0) {
+                const realRatePerMs = itemCount / timeDiff;
+                const realCPM = realRatePerMs * 60000;
+                // 異常値ガード (秒間333件以上はノイズとみなす)
+                if(!isDemo && itemCount > 0 && realCPM < 20000) {
+                    updateTrendData(Math.round(realCPM));
                 }
-                let lowerLimit = Math.max(minPhysicalMs, youtubeSuggestedInterval);
-                currentPollingInterval = Math.min(MAX_POLLING_ACTIVE, Math.max(lowerLimit, nextTargetMs));
+
+                if(document.getElementById('autoSpeedCheck').checked) {
+                    let nextTargetMs = currentPollingInterval; 
+                    if (itemCount === 0) {
+                        nextTargetMs = Math.min(MAX_POLLING_IDLE, currentPollingInterval * 1.5);
+                        setStatus(`💤 待機中 (${(nextTargetMs/1000).toFixed(1)}s)`, "grace");
+                    } else {
+                        let idealMs = BATCH_TARGET / (realRatePerMs || 0.0001);
+                        const blend = (itemCount > 1800) ? 0.8 : 0.4;
+                        nextTargetMs = (currentPollingInterval * (1-blend)) + (idealMs * blend);
+                        setStatus(`🚀 調整中 (実測${Math.round(realCPM)}CPM -> 次${(nextTargetMs/1000).toFixed(1)}s)`, "active");
+                    }
+                    let lowerLimit = Math.max(minPhysicalMs, youtubeSuggestedInterval);
+                    currentPollingInterval = Math.min(MAX_POLLING_ACTIVE, Math.max(lowerLimit, nextTargetMs));
+                } else {
+                    let limit = Math.max(minPhysicalMs, calculatedZInterval, youtubeSuggestedInterval);
+                    currentPollingInterval = Math.min(MAX_POLLING_ACTIVE, limit);
+                    setStatus(`🛡️ 固定 (${(currentPollingInterval/1000).toFixed(1)}s)`, "grace");
+                }
             } else {
-                let limit = Math.max(minPhysicalMs, calculatedZInterval, youtubeSuggestedInterval);
-                currentPollingInterval = Math.min(MAX_POLLING_ACTIVE, limit);
-                setStatus(`🛡️ 固定 (${(currentPollingInterval/1000).toFixed(1)}s)`, "grace");
+                // 初回は計算スキップ
+                isFirstRun = false;
+                setStatus("🚀 接続成功！ 計測開始...", "active");
             }
+
         } catch (e) {
             console.error(e);
             if (e.message.includes("403") || e.message.includes("429")) {
@@ -820,8 +800,6 @@
     async function fetchComments(key) { addApiQuota(5); let url = `https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId=${liveChatId}&part=id&key=${key}&maxResults=2000`; if (nextPageToken) url += `&pageToken=${nextPageToken}`; const res = await fetch(url); if (!res.ok) throw new Error(`${res.status}`); const data = await res.json(); 
         if(data.pollingIntervalMillis) youtubeSuggestedInterval = data.pollingIntervalMillis;
         let count = 0; if (data.items && data.items.length > 0) { count = data.items.length; sessionData.totalComments += count; lastCommentReceivedTime = Date.now(); } if (data.nextPageToken) nextPageToken = data.nextPageToken; 
-        
-        // 更新時間を表示
         const d = new Date();
         document.getElementById('lastCommTime').innerText = `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')}`;
         return count; 
@@ -837,7 +815,7 @@
     function updateSessionInfo() { let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); document.getElementById('challengeCount').innerText = `${h.length + 1}回目`; document.getElementById('prevScore').innerText = h.length > 0 ? h[h.length - 1].points.toLocaleString() : "--"; }
     function saveToHistory(r) { let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); h.push(r); localStorage.setItem(HISTORY_KEY,JSON.stringify(h)); renderHistory(); }
     function renderHistory() { let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); const tb=document.querySelector('#historyTable tbody'); tb.innerHTML=""; h.slice().reverse().forEach((i,x)=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${h.length-x}</td><td style="font-weight:900;color:#e84393;">${i.points}</td><td>${i.startTime}</td><td>${i.endTime}</td><td>+${i.subDiff}</td><td>${i.firstComments}</td><td>${i.totalComments}</td><td>${i.reason}</td>`; tb.appendChild(tr); }); }
-    function clearHistory(){ if(confirm("履歴削除？")){ localStorage.removeItem(HISTORY_KEY); renderHistory(); updateSessionInfo(); } }
+    function clearHistory(){ if(confirm("履歴削除？")){ localStorage.removeItem(HISTORY_KEY); channelTrends={}; saveTrendsToStorage(); renderHistory(); updateSessionInfo(); } }
     function downloadCSV(){ let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); if(h.length==0)return; let c="\uFEFF回,pt,開始,終了,登録増,初コメ,コメ,理由\n"; h.forEach((i,x)=>c+=`${x+1},${i.points},${i.startTime},${i.endTime},${i.subDiff},${i.firstComments},${i.totalComments},${i.reason}\n`); const l=document.createElement("a"); l.href=URL.createObjectURL(new Blob([c],{type:"text/csv;charset=utf-8;"})); l.download="history.csv"; l.click(); }
     function displayApiQuota() { const u = JSON.parse(localStorage.getItem(QUOTA_KEY) || "{}"); const t = new Date().toDateString(); const c = u[t] || 0; const b = document.getElementById('apiBar'); const p = Math.min(100, (c/10000)*100); b.style.width = `${p}%`; b.style.background = p>90?"#d63031":(p>70?"#fdcb6e":"#00b894"); document.getElementById('apiQuotaDisplay').innerText = `${c.toLocaleString()} / 10000 pt`; }
     function addApiQuota(a) { if(document.getElementById('demoModeCheck').checked) return; const u = JSON.parse(localStorage.getItem(QUOTA_KEY) || "{}"); const t = new Date().toDateString(); u[t] = (u[t]||0) + a; localStorage.setItem(QUOTA_KEY, JSON.stringify(u)); displayApiQuota(); }
