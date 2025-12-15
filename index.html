@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jewel Ocean: AI-Eco (Burst Fix)</title>
+    <title>Jewel Ocean: Final Complete Edition</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
     <style>
+        /* --- デザイン定義 (変更なし) --- */
         :root {
             --bg-grad-1: #a18cd1; --bg-grad-2: #fbc2eb;
             --glass-bg: rgba(255, 255, 255, 0.95); --glass-border: rgba(255, 255, 255, 0.6);
@@ -84,6 +85,7 @@
         #timer-hatsu { border-color: #e84393; cursor: pointer; }
         #timer-dousetsu { border-color: #0984e3; }
         .timer-time { font-size: 3.5rem; font-weight: 900; color: #333; font-family: 'Courier New', Courier, monospace; line-height: 1.0; margin: 10px 0; font-variant-numeric: tabular-nums; }
+        .timer-msg { font-size: 0.95rem; font-weight: bold; color: #555; min-height: 2.8em; display: flex; align-items: center; justify-content: center; white-space: pre-wrap; }
         .danger-text { -webkit-text-fill-color: #e74c3c !important; color: #e74c3c !important; }
         .blink-anim { animation: blink-slow 1.5s infinite ease-in-out; }
         @keyframes blink-slow { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
@@ -104,6 +106,7 @@
         body.obs-mode { background: transparent; padding: 0; }
         body.obs-mode .bubbles, body.obs-mode .setting-wrap, body.obs-mode .history-wrap, body.obs-mode .status-bar { display: none; }
         body.obs-mode .obs-toggle { position: fixed; top: 10px; right: 10px; opacity: 0.2; transition: opacity 0.3s; }
+        body.obs-mode .obs-toggle:hover { opacity: 1; }
         body.obs-mode .glass-card.score-card { margin: 0; border: 6px solid var(--accent-color); background: rgba(255,255,255,0.95); }
         
         .status-bar { padding: 16px; background: #fff; border-radius: 16px; text-align: center; font-weight: bold; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
@@ -344,7 +347,8 @@
             <h2 style="margin:0; border:none; font-size:1.3rem;">📜 過去の履歴</h2>
             <div>
                 <button onclick="downloadCSV()" style="background:#b2bec3; padding:8px 16px; border-radius:20px; color:#fff;" type="button">CSV保存</button>
-                <button onclick="clearHistory()" style="background:#ff7675; padding:8px 16px; border-radius:20px; color:#fff; margin-left:5px;" type="button">履歴クリア (データ削除)</button>
+                <button onclick="resetTrends()" style="background:#fdcb6e; padding:8px 16px; border-radius:20px; color:#fff; margin-left:5px; font-weight:bold;" type="button">学習リセット</button>
+                <button onclick="clearHistory()" style="background:#ff7675; padding:8px 16px; border-radius:20px; color:#fff; margin-left:5px;" type="button">履歴クリア</button>
             </div>
         </div>
         <div class="table-wrap">
@@ -356,8 +360,8 @@
 <div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li><li>※複数アカウントで作成したキーを入力すると制限が緩和されます！</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;" type="button">閉じる</button></div></div>
 
 <script>
-    const API_KEY_ELEMENT_ID = "apiKey";
-    const HISTORY_KEY = "yt_endurance_v49_fix_burst";
+    const API_KEY_ELEMENT_ID = "apiKey"; // IDをapiKeyに統一
+    const HISTORY_KEY = "yt_endurance_v52_final_msg";
     const QUOTA_KEY = "yt_api_quota_pt_v1";
     const CHANNEL_TREND_KEY = "yt_channel_trends_v2";
     
@@ -370,7 +374,7 @@
 
     let isTracking = false;
     let isFinishing = false;
-    let isFirstRun = true; // 初回フラグ
+    let isFirstRun = true; 
 
     let currentPollingInterval = 5000; 
     let calculatedZInterval = 10000;
@@ -440,10 +444,23 @@
         return key;
     }
 
-    function getDailyLimitPerKey(zHours) {
-        if (zHours <= 6) return 9800;
-        if (zHours <= 19) return 9000;
+    function getDailyLimitPerKey(z) {
+        if (z <= 6) return 9800;
+        if (z <= 19) return 9000;
         return 8500;
+    }
+
+    function calculateMaxDailyHours(targetHours) {
+        const now = new Date();
+        const resetHour = checkDstAndDisplayResetTime();
+        let resetTime = new Date(now);
+        resetTime.setHours(resetHour, 0, 0, 0);
+        if (now >= resetTime) resetTime.setDate(resetTime.getDate() + 1);
+        const hoursUntilReset = (resetTime - now) / (1000 * 60 * 60);
+        if (targetHours <= hoursUntilReset) return targetHours;
+        const remaining = targetHours - hoursUntilReset;
+        if (remaining >= 24) return 24;
+        return Math.max(hoursUntilReset, remaining);
     }
 
     function updateForecast() {
@@ -458,9 +475,10 @@
         const calcKeyCount = Math.max(1, apiKeys.length);
         const minPhysicalMs = API_KEY_LIMIT_MS / calcKeyCount; 
 
-        const limitPerKey = getDailyLimitPerKey(h);
+        const z = calculateMaxDailyHours(h);
+        const limitPerKey = getDailyLimitPerKey(z);
         const totalDailyLimit = limitPerKey * calcKeyCount;
-        const pointsPerHour = totalDailyLimit / (h + 4);
+        const pointsPerHour = totalDailyLimit / (z + 4);
         const safeIntervalSec = (3600 * 5) / pointsPerHour;
         calculatedZInterval = safeIntervalSec * 1000;
         
@@ -478,12 +496,12 @@
         if(neededKeys < 1) neededKeys = 1;
 
         let msg = `🤖 <b>AI分析:</b><br>`;
-        msg += `・目標: ${h}時間 (上限${limitPerKey}pt×${calcKeyCount})<br>`;
-        msg += `・Z+4基準: <b>${(calculatedZInterval/1000).toFixed(1)}秒</b><br>`;
+        msg += `・目標: ${h}時間 (Z=${z.toFixed(1)}h / 上限${limitPerKey}pt)<br>`;
+        msg += `・Z+4基準: <b>${(calculatedZInterval/1000).toFixed(1)}秒</b>間隔<br>`;
         msg += `・過去最大勢い: 約${Math.round(estimatedCPM)} CPM (推定)<br>`;
         
         if (apiKeys.length === 0) {
-             msg += `<span style="color:#e74c3c; font-weight:bold;">⚠️ キー未入力 (仮定計算中)</span>`;
+             msg += `<span style="color:#e74c3c; font-weight:bold;">⚠️ キー未入力 (仮定計算)</span>`;
         } else if(apiKeys.length < neededKeys) {
             msg += `<span style="color:#e74c3c; font-weight:bold;">⚠️ キー不足の可能性 (推奨: ${neededKeys}個以上)</span>`;
         } else {
@@ -521,7 +539,7 @@
         document.body.classList.add('tracking');
         document.getElementById('btnStart').innerText = "接続中...";
         isTracking = true;
-        isFirstRun = true; // 初回フラグON
+        isFirstRun = true; 
 
         try {
             await initSession(); 
@@ -631,7 +649,7 @@
             if (!isFirstRun && timeDiff > 0) {
                 const realRatePerMs = itemCount / timeDiff;
                 const realCPM = realRatePerMs * 60000;
-                // 異常値ガード (秒間333件以上はノイズとみなす)
+                
                 if(!isDemo && itemCount > 0 && realCPM < 20000) {
                     updateTrendData(Math.round(realCPM));
                 }
@@ -655,7 +673,6 @@
                     setStatus(`🛡️ 固定 (${(currentPollingInterval/1000).toFixed(1)}s)`, "grace");
                 }
             } else {
-                // 初回は計算スキップ
                 isFirstRun = false;
                 setStatus("🚀 接続成功！ 計測開始...", "active");
             }
@@ -695,8 +712,19 @@
         requestAnimationFrame(updateVisualsLoop);
     }
     function lerp(s, e, f) { let d = e - s; if (Math.abs(d) < 0.5) return e; return s + (d * f); }
-    function loadTrendsFromStorage() { try { channelTrends = JSON.parse(localStorage.getItem(CHANNEL_TREND_KEY) || "{}"); } catch(e) { channelTrends = {}; } }
+    
+    function loadTrendsFromStorage() { 
+        try { 
+            channelTrends = JSON.parse(localStorage.getItem(CHANNEL_TREND_KEY) || "{}");
+            for(let cid in channelTrends) {
+                if(Array.isArray(channelTrends[cid])) {
+                    channelTrends[cid] = channelTrends[cid].map(v => v > 20000 ? 0 : v);
+                }
+            }
+        } catch(e) { channelTrends = {}; } 
+    }
     function saveTrendsToStorage() { try { localStorage.setItem(CHANNEL_TREND_KEY, JSON.stringify(channelTrends)); } catch(e) { console.error("Save failed", e); } }
+    function resetTrends() { if(confirm("AIの学習データ(CPM)をリセットしますか？")){ channelTrends={}; saveTrendsToStorage(); updateForecast(); alert("学習データをリセットしました"); } }
     function updateTrendData(cpm) {
         if (!channelId) return;
         const currentHour = new Date().getHours();
@@ -776,7 +804,7 @@
     function closeModal() { document.getElementById('helpModal').style.display = 'none'; }
     function setStatus(msg, type) { const bar = document.getElementById('statusBox'); bar.innerText = msg; bar.className = 'status-bar'; if(type==='active') bar.classList.add('status-ok'); if(type==='warn') bar.classList.add('status-warn'); if(type==='demo') bar.classList.add('status-demo'); if(type==='grace') bar.classList.add('status-grace'); }
     function toggleApiVisibility() { document.getElementById(API_KEY_ELEMENT_ID).classList.toggle('api-hidden'); }
-    function manualHatsuAction() { if(!isTracking) return; sessionData.manualFirstComments++; lastManualFirstActionTime = Date.now(); hasWarned30SecHatsu = false; lastHatsuAlertMin = -1; const m=document.getElementById('hatsu-msg'); m.innerText="初コメ！"; m.classList.add('pop-msg'); setTimeout(()=>m.classList.remove('pop-msg'),5000); speakText("初コメ、ありがとうございます"); }
+    function manualHatsuAction() { if(!isTracking) return; sessionData.manualFirstComments++; lastManualFirstActionTime = Date.now(); hasWarned30SecHatsu = false; lastHatsuAlertMin = -1; const m=document.getElementById('hatsu-msg'); m.innerText="初見様、ありがとうございます\nゆっくりしていってくださいね"; m.classList.add('pop-msg'); setTimeout(()=>m.classList.remove('pop-msg'),5000); speakText("初見様、ありがとうございます。ゆっくりしていってくださいね。"); }
     function adjustFirst(a) { if(!isTracking) return; sessionData.manualFirstComments += a; if (sessionData.manualFirstComments < 0) sessionData.manualFirstComments = 0; }
     async function demoSimulate() { const add = Math.floor(Math.random() * 4); if(add > 0) { sessionData.totalComments += add; lastCommentReceivedTime = Date.now(); } sessionData.currentViewers += Math.floor(Math.random() * 5) - 2; if(sessionData.currentViewers < 0) sessionData.currentViewers = 0; if(!isManualSub && Math.random() > 0.8) sessionData.currentSubCount += 1; }
     function adjustSub(a) { if(!isTracking) return; sessionData.currentSubCount += a; }
@@ -815,7 +843,7 @@
     function updateSessionInfo() { let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); document.getElementById('challengeCount').innerText = `${h.length + 1}回目`; document.getElementById('prevScore').innerText = h.length > 0 ? h[h.length - 1].points.toLocaleString() : "--"; }
     function saveToHistory(r) { let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); h.push(r); localStorage.setItem(HISTORY_KEY,JSON.stringify(h)); renderHistory(); }
     function renderHistory() { let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); const tb=document.querySelector('#historyTable tbody'); tb.innerHTML=""; h.slice().reverse().forEach((i,x)=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${h.length-x}</td><td style="font-weight:900;color:#e84393;">${i.points}</td><td>${i.startTime}</td><td>${i.endTime}</td><td>+${i.subDiff}</td><td>${i.firstComments}</td><td>${i.totalComments}</td><td>${i.reason}</td>`; tb.appendChild(tr); }); }
-    function clearHistory(){ if(confirm("履歴削除？")){ localStorage.removeItem(HISTORY_KEY); channelTrends={}; saveTrendsToStorage(); renderHistory(); updateSessionInfo(); } }
+    function clearHistory(){ if(confirm("履歴を削除しますか？\n(学習したチャンネル傾向データは残ります)")){ localStorage.removeItem(HISTORY_KEY); renderHistory(); updateSessionInfo(); } }
     function downloadCSV(){ let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); if(h.length==0)return; let c="\uFEFF回,pt,開始,終了,登録増,初コメ,コメ,理由\n"; h.forEach((i,x)=>c+=`${x+1},${i.points},${i.startTime},${i.endTime},${i.subDiff},${i.firstComments},${i.totalComments},${i.reason}\n`); const l=document.createElement("a"); l.href=URL.createObjectURL(new Blob([c],{type:"text/csv;charset=utf-8;"})); l.download="history.csv"; l.click(); }
     function displayApiQuota() { const u = JSON.parse(localStorage.getItem(QUOTA_KEY) || "{}"); const t = new Date().toDateString(); const c = u[t] || 0; const b = document.getElementById('apiBar'); const p = Math.min(100, (c/10000)*100); b.style.width = `${p}%`; b.style.background = p>90?"#d63031":(p>70?"#fdcb6e":"#00b894"); document.getElementById('apiQuotaDisplay').innerText = `${c.toLocaleString()} / 10000 pt`; }
     function addApiQuota(a) { if(document.getElementById('demoModeCheck').checked) return; const u = JSON.parse(localStorage.getItem(QUOTA_KEY) || "{}"); const t = new Date().toDateString(); u[t] = (u[t]||0) + a; localStorage.setItem(QUOTA_KEY, JSON.stringify(u)); displayApiQuota(); }
