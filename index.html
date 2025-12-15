@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jewel Ocean: Voice Master Edition</title>
+    <title>Jewel Ocean: Perfect Voice Fix</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -103,7 +103,13 @@
         .btn-eye { position: absolute; right: 10px; top: 42px; background: transparent; border: none; font-size: 1.2rem; cursor: pointer; opacity: 0.6; }
 
         .obs-toggle { text-align: right; margin-bottom: 10px; }
-        body.obs-mode { background: transparent; padding: 0; }
+        
+        /* --- OBSモードの調整 --- */
+        body.obs-mode { 
+            background: transparent; 
+            padding: 0; 
+            padding-top: 60px; /* 余白追加 */
+        }
         body.obs-mode .bubbles, body.obs-mode .setting-wrap, body.obs-mode .history-wrap, body.obs-mode .status-bar { display: none; }
         body.obs-mode .obs-toggle { position: fixed; top: 10px; right: 10px; opacity: 0.2; transition: opacity 0.3s; }
         body.obs-mode .obs-toggle:hover { opacity: 1; }
@@ -130,7 +136,10 @@
         .sound-setting { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; margin-top: 15px; padding-top:15px; border-top: 1px dashed #ccc; }
         .volume-control { display: flex; align-items: center; gap: 8px; }
         .btn-test { background: #b2bec3; padding: 6px 12px; font-size: 0.85rem; border-radius: 20px; color: white; border: none; cursor: pointer; }
-        input[type=range] { width: 100px; cursor: pointer; }
+        
+        /* スライダーを長くする */
+        input[type=range] { width: 250px; cursor: pointer; }
+        @media (max-width: 500px) { input[type=range] { width: 150px; } }
         
         /* Voice Selector */
         .voice-box { display: flex; flex-direction: column; gap: 5px; width: 100%; max-width: 250px; }
@@ -422,6 +431,19 @@
         loadTrendsFromStorage(); 
         updateForecast(); 
         populateVoiceList();
+        
+        // 音量初期化
+        const slider = document.getElementById('volumeSlider');
+        const display = document.getElementById('volValue');
+        globalVolume = parseFloat(slider.value);
+        display.innerText = Math.round(globalVolume * 100) + "%";
+        
+        // イベントリスナー登録 (window.onload内で行うことで確実に動作させる)
+        slider.addEventListener('input', function(e) {
+            globalVolume = parseFloat(e.target.value);
+            display.innerText = Math.round(globalVolume * 100) + "%";
+        });
+
         requestAnimationFrame(updateVisualsLoop); 
     };
     
@@ -432,7 +454,6 @@
         const sel = document.getElementById('voiceSourceSelector');
         sel.innerHTML = '<option value="">(端末の標準音声)</option>';
         voices.forEach((v, i) => {
-            // 日本語のみ、または主要なものを表示
             if(v.lang.includes('ja') || v.lang.includes('JP')) {
                 const opt = document.createElement('option');
                 opt.value = i;
@@ -678,7 +699,6 @@
             const timeDiff = now - lastFetchTime; 
             lastFetchTime = now;
             
-            // --- CPM計算 ---
             if (!isFirstRun && timeDiff > 0) {
                 const realRatePerMs = itemCount / timeDiff;
                 const realCPM = realRatePerMs * 60000;
@@ -793,7 +813,7 @@
             const th = parseInt(document.getElementById('resetViewerThreshold').value);
             const limitMs = parseFloat(document.getElementById('resetDurationMinutes').value) * 60 * 1000;
             if (sessionData.currentViewers <= th) {
-                // ■ 修正点: 下回った瞬間に喋る
+                // ■ 修正: 下回った瞬間に喋る
                 if (!dousetsuDropStartTime) {
                     dousetsuDropStartTime = now;
                     speakText("同接が、目標を下回りました");
@@ -806,7 +826,7 @@
                 if (sec <= -10) return finishSession("同接低下");
             } else {
                 if (dousetsuDropStartTime !== null) {
-                    speakText("同接、基準を上回りました。ナイスです。");
+                    speakText("どううせつ、基準を上回りました。ナイスです。");
                     const m = document.getElementById('dousetsu-msg');
                     m.innerText = "回復！ナイス！"; m.classList.add('pop-msg');
                     setTimeout(()=>m.classList.remove('pop-msg'), 5000);
@@ -835,7 +855,7 @@
     function initAudio() { if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if(audioCtx.state === 'suspended') audioCtx.resume(); }
     function playVolumeTest() { initAudio(); speakText("この音量でいいですか？"); setTimeout(playBeepSound, 2000); }
     
-    // Voice Logic (With Base Selection)
+    // Voice Logic
     function speakText(text) { 
         if (!document.getElementById('soundEnabled').checked) return; 
         window.speechSynthesis.cancel(); 
@@ -843,14 +863,12 @@
         msg.lang = "ja-JP"; 
         msg.volume = Math.min(globalVolume, 1.0); 
         
-        // ベース音声の適用
         const voices = speechSynthesis.getVoices();
         const selectedIndex = document.getElementById('voiceSourceSelector').value;
         if(selectedIndex && voices[selectedIndex]) {
             msg.voice = voices[selectedIndex];
         }
 
-        // ピッチ・速度の適用
         const type = document.getElementById('voiceTypeSelector').value;
         switch(type) {
             case 'kawaii': msg.pitch = 1.1; msg.rate = 1.2; break;
@@ -866,7 +884,7 @@
     function closeModal() { document.getElementById('helpModal').style.display = 'none'; }
     function setStatus(msg, type) { const bar = document.getElementById('statusBox'); bar.innerText = msg; bar.className = 'status-bar'; if(type==='active') bar.classList.add('status-ok'); if(type==='warn') bar.classList.add('status-warn'); if(type==='demo') bar.classList.add('status-demo'); if(type==='grace') bar.classList.add('status-grace'); }
     function toggleApiVisibility() { document.getElementById(API_KEY_ELEMENT_ID).classList.toggle('api-hidden'); }
-    function manualHatsuAction() { if(!isTracking) return; sessionData.manualFirstComments++; lastManualFirstActionTime = Date.now(); hasWarned30SecHatsu = false; lastHatsuAlertMin = -1; const m=document.getElementById('hatsu-msg'); m.innerText="初見様、来てくれてありがとう\nゆっくりしていってくださいね"; m.classList.add('pop-msg'); setTimeout(()=>m.classList.remove('pop-msg'),5000); speakText("しょけんさま、きてくださって、本当にありがとうございます。ゆっくりしていってくださいね。"); }
+    function manualHatsuAction() { if(!isTracking) return; sessionData.manualFirstComments++; lastManualFirstActionTime = Date.now(); hasWarned30SecHatsu = false; lastHatsuAlertMin = -1; const m=document.getElementById('hatsu-msg'); m.innerText="初見様、来てくれてありがとう☆彡 \nゆっくりしていってくださいね"; m.classList.add('pop-msg'); setTimeout(()=>m.classList.remove('pop-msg'),5000); speakText("しょけんさま、きてくださりありがとうございます。ゆっくりしていってくださいね。"); }
     function adjustFirst(a) { if(!isTracking) return; sessionData.manualFirstComments += a; if (sessionData.manualFirstComments < 0) sessionData.manualFirstComments = 0; }
     async function demoSimulate() { const add = Math.floor(Math.random() * 4); if(add > 0) { sessionData.totalComments += add; lastCommentReceivedTime = Date.now(); } sessionData.currentViewers += Math.floor(Math.random() * 5) - 2; if(sessionData.currentViewers < 0) sessionData.currentViewers = 0; if(!isManualSub && Math.random() > 0.8) sessionData.currentSubCount += 1; }
     function adjustSub(a) { if(!isTracking) return; sessionData.currentSubCount += a; }
@@ -911,26 +929,6 @@
     function addApiQuota(a) { if(document.getElementById('demoModeCheck').checked) return; const u = JSON.parse(localStorage.getItem(QUOTA_KEY) || "{}"); const t = new Date().toDateString(); u[t] = (u[t]||0) + a; localStorage.setItem(QUOTA_KEY, JSON.stringify(u)); displayApiQuota(); }
     function checkQuotaSafe() { if(document.getElementById('demoModeCheck').checked) return true; const u = JSON.parse(localStorage.getItem(QUOTA_KEY) || "{}"); return (u[new Date().toDateString()] || 0) < 10000; }
     function checkDstAndDisplayResetTime() { const n = new Date(); const isDst = n.getTimezoneOffset() < Math.max(new Date(n.getFullYear(),0,1).getTimezoneOffset(), new Date(n.getFullYear(),6,1).getTimezoneOffset()); const rh = isDst ? 16 : 17; if(document.getElementById('apiResetTimeDisplay')) document.getElementById('apiResetTimeDisplay').innerText = `${rh}:00 (JST)`; return rh; }
-    
-    // 音声リスト取得
-    function populateVoiceList() {
-        if(typeof speechSynthesis === 'undefined') return;
-        const voices = speechSynthesis.getVoices();
-        const sel = document.getElementById('voiceSourceSelector');
-        sel.innerHTML = '<option value="">(端末の標準音声)</option>';
-        voices.forEach((v, i) => {
-            if(v.lang.includes('ja') || v.lang.includes('JP')) {
-                const opt = document.createElement('option');
-                opt.value = i;
-                opt.textContent = `${v.name} (${v.lang})`;
-                sel.appendChild(opt);
-            }
-        });
-    }
-    if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
-        speechSynthesis.onvoiceschanged = populateVoiceList;
-    }
-
     async function previewVideo() { 
         refreshApiKeys(); 
         const u=document.getElementById('url').value; const id=extractVideoId(u); if(!id) return alert("URL不正"); 
