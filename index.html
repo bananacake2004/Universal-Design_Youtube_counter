@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jewel Ocean: Final Complete Edition</title>
+    <title>Jewel Ocean: Voice Master Edition</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
     <style>
-        /* --- デザイン定義 (変更なし) --- */
+        /* --- デザイン定義 --- */
         :root {
             --bg-grad-1: #a18cd1; --bg-grad-2: #fbc2eb;
             --glass-bg: rgba(255, 255, 255, 0.95); --glass-border: rgba(255, 255, 255, 0.6);
@@ -127,10 +127,14 @@
         .btn-plus { background:#00b894; box-shadow: 0 4px 8px rgba(0,184,148,0.3); }
         .btn-minus { background:#d63031; box-shadow: 0 4px 8px rgba(214,48,49,0.3); }
         
-        .sound-setting { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 15px; margin-top: 15px; padding-top:15px; border-top: 1px dashed #ccc; }
+        .sound-setting { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; margin-top: 15px; padding-top:15px; border-top: 1px dashed #ccc; }
         .volume-control { display: flex; align-items: center; gap: 8px; }
         .btn-test { background: #b2bec3; padding: 6px 12px; font-size: 0.85rem; border-radius: 20px; color: white; border: none; cursor: pointer; }
-        input[type=range] { width: 150px; cursor: pointer; }
+        input[type=range] { width: 100px; cursor: pointer; }
+        
+        /* Voice Selector */
+        .voice-box { display: flex; flex-direction: column; gap: 5px; width: 100%; max-width: 250px; }
+        .voice-select { padding: 8px; border-radius: 10px; border: 1px solid #ccc; font-size: 0.9rem; width: 100%; }
 
         .api-meter { background: #fff; padding: 8px 16px; border-radius: 50px; border: 2px solid #dfe6e9; font-weight: bold; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 8px; color: var(--text-sub); }
         .api-bar-bg { width: 100px; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
@@ -330,13 +334,21 @@
         </div>
 
         <div class="sound-setting">
-            <label style="cursor:pointer; font-size:0.9rem; display:flex; align-items:center; gap:5px;">
-                <input type="checkbox" id="soundEnabled" checked style="width:18px; height:18px;"> 🔊 ON/OFF
-            </label>
-            <div class="volume-control">
-                <span style="font-size:0.85rem; color:var(--text-sub);">音量</span>
-                <input type="range" id="volumeSlider" min="0" max="1.5" step="0.05" value="0.5">
-                <span id="volValue" style="font-size:0.9rem; font-weight:bold; color:var(--accent-color); width: 45px;">50%</span>
+            <div style="display:flex; flex-direction:column; gap:5px; align-items:center;">
+                <label style="cursor:pointer; font-size:0.9rem;"><input type="checkbox" id="soundEnabled" checked> 🔊 音声ON</label>
+                <div class="volume-control">
+                    <input type="range" id="volumeSlider" min="0" max="1.5" step="0.05" value="0.5">
+                    <span id="volValue" style="font-size:0.85rem; font-weight:bold; color:var(--accent-color);">50%</span>
+                </div>
+            </div>
+            
+            <div class="voice-box">
+                <select id="voiceSourceSelector" class="voice-select" onchange="playVolumeTest()"><option value="">(ベース音声を選択)</option></select>
+                <select id="voiceTypeSelector" class="voice-select" onchange="playVolumeTest()">
+                    <option value="robot">🤖 機械ボイス (標準)</option>
+                    <option value="kawaii">👧 かわいらしい (高め)</option>
+                    <option value="ikemen">✨ イケメン (低め)</option>
+                </select>
             </div>
             <button class="btn-test" onclick="playVolumeTest()" type="button">🔊 テスト</button>
         </div>
@@ -360,8 +372,8 @@
 <div id="helpModal" class="modal-ol" onclick="if(event.target==this)closeModal()"><div class="modal-in"><h2>🔑 APIキー取得手順</h2><p>Googleのルール上、取得にはクレカ登録が必要ですが、このアプリの利用範囲なら無料です。</p><ol style="line-height:2;"><li><a href="https://console.cloud.google.com/" target="_blank" style="color:blue;">Google Cloud Console</a>へ</li><li>「プロジェクト作成」</li><li>「YouTube Data API v3」を検索して有効化</li><li>認証情報 → APIキー作成</li><li>※複数アカウントで作成したキーを入力すると制限が緩和されます！</li></ol><button onclick="closeModal()" style="width:100%; padding:15px; border-radius:12px; background:#dfe6e9; font-weight:bold;" type="button">閉じる</button></div></div>
 
 <script>
-    const API_KEY_ELEMENT_ID = "apiKey"; // IDをapiKeyに統一
-    const HISTORY_KEY = "yt_endurance_v52_final_msg";
+    const API_KEY_ELEMENT_ID = "apiKey";
+    const HISTORY_KEY = "yt_endurance_v55_final_voiceselect";
     const QUOTA_KEY = "yt_api_quota_pt_v1";
     const CHANNEL_TREND_KEY = "yt_channel_trends_v2";
     
@@ -409,9 +421,30 @@
         updateVisibility(); 
         loadTrendsFromStorage(); 
         updateForecast(); 
+        populateVoiceList();
         requestAnimationFrame(updateVisualsLoop); 
     };
     
+    // 音声リスト取得
+    function populateVoiceList() {
+        if(typeof speechSynthesis === 'undefined') return;
+        const voices = speechSynthesis.getVoices();
+        const sel = document.getElementById('voiceSourceSelector');
+        sel.innerHTML = '<option value="">(端末の標準音声)</option>';
+        voices.forEach((v, i) => {
+            // 日本語のみ、または主要なものを表示
+            if(v.lang.includes('ja') || v.lang.includes('JP')) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = `${v.name} (${v.lang})`;
+                sel.appendChild(opt);
+            }
+        });
+    }
+    if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = populateVoiceList;
+    }
+
     document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") saveTrendsToStorage(); });
     document.getElementById('cond_no_first').addEventListener('change', updateVisibility);
     document.getElementById('cond_low_viewers').addEventListener('change', updateVisibility);
@@ -645,7 +678,7 @@
             const timeDiff = now - lastFetchTime; 
             lastFetchTime = now;
             
-            // --- CPM計算 (初回はスキップ) ---
+            // --- CPM計算 ---
             if (!isFirstRun && timeDiff > 0) {
                 const realRatePerMs = itemCount / timeDiff;
                 const realCPM = realRatePerMs * 60000;
@@ -760,7 +793,11 @@
             const th = parseInt(document.getElementById('resetViewerThreshold').value);
             const limitMs = parseFloat(document.getElementById('resetDurationMinutes').value) * 60 * 1000;
             if (sessionData.currentViewers <= th) {
-                if (!dousetsuDropStartTime) dousetsuDropStartTime = now;
+                // ■ 修正点: 下回った瞬間に喋る
+                if (!dousetsuDropStartTime) {
+                    dousetsuDropStartTime = now;
+                    speakText("同接が、目標を下回りました");
+                }
                 const sec = Math.ceil((limitMs - (now - dousetsuDropStartTime)) / 1000);
                 if ([30, 10, 5].includes(sec) && lastDousetsuCheckSec !== sec) { updateStatsSingle(); lastDousetsuCheckSec = sec; }
                 updateTimerUI('dousetsu', sec);
@@ -797,14 +834,39 @@
     
     function initAudio() { if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if(audioCtx.state === 'suspended') audioCtx.resume(); }
     function playVolumeTest() { initAudio(); speakText("この音量でいいですか？"); setTimeout(playBeepSound, 2000); }
-    function speakText(text) { if (!document.getElementById('soundEnabled').checked) return; window.speechSynthesis.cancel(); const msg = new SpeechSynthesisUtterance(text); msg.lang = "ja-JP"; msg.volume = Math.min(globalVolume, 1.0); msg.rate = 1.1; window.speechSynthesis.speak(msg); }
+    
+    // Voice Logic (With Base Selection)
+    function speakText(text) { 
+        if (!document.getElementById('soundEnabled').checked) return; 
+        window.speechSynthesis.cancel(); 
+        const msg = new SpeechSynthesisUtterance(text); 
+        msg.lang = "ja-JP"; 
+        msg.volume = Math.min(globalVolume, 1.0); 
+        
+        // ベース音声の適用
+        const voices = speechSynthesis.getVoices();
+        const selectedIndex = document.getElementById('voiceSourceSelector').value;
+        if(selectedIndex && voices[selectedIndex]) {
+            msg.voice = voices[selectedIndex];
+        }
+
+        // ピッチ・速度の適用
+        const type = document.getElementById('voiceTypeSelector').value;
+        switch(type) {
+            case 'kawaii': msg.pitch = 1.1; msg.rate = 1.2; break;
+            case 'ikemen': msg.pitch = 0.8; msg.rate = 0.85; break;
+            default: msg.pitch = 1.0; msg.rate = 1.0;
+        }
+        window.speechSynthesis.speak(msg); 
+    }
+    
     function playBeepSound() { if (!document.getElementById('soundEnabled').checked) return; initAudio(); const now = audioCtx.currentTime; const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.type = "sine"; osc.frequency.setValueAtTime(880, now); osc.frequency.setValueAtTime(0, now + 0.1); osc.frequency.setValueAtTime(880, now + 0.15); const beepVol = globalVolume * 0.1; gain.gain.setValueAtTime(beepVol, now); gain.gain.linearRampToValueAtTime(0, now + 0.3); osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now + 0.3); }
     function toggleObs() { document.body.classList.toggle('obs-mode'); document.body.style.backgroundImage = document.body.classList.contains('obs-mode') ? 'none' : ''; }
     function openModal() { document.getElementById('helpModal').style.display = 'flex'; }
     function closeModal() { document.getElementById('helpModal').style.display = 'none'; }
     function setStatus(msg, type) { const bar = document.getElementById('statusBox'); bar.innerText = msg; bar.className = 'status-bar'; if(type==='active') bar.classList.add('status-ok'); if(type==='warn') bar.classList.add('status-warn'); if(type==='demo') bar.classList.add('status-demo'); if(type==='grace') bar.classList.add('status-grace'); }
     function toggleApiVisibility() { document.getElementById(API_KEY_ELEMENT_ID).classList.toggle('api-hidden'); }
-    function manualHatsuAction() { if(!isTracking) return; sessionData.manualFirstComments++; lastManualFirstActionTime = Date.now(); hasWarned30SecHatsu = false; lastHatsuAlertMin = -1; const m=document.getElementById('hatsu-msg'); m.innerText="初見様、ありがとうございます\nゆっくりしていってくださいね"; m.classList.add('pop-msg'); setTimeout(()=>m.classList.remove('pop-msg'),5000); speakText("初見様、ありがとうございます。ゆっくりしていってくださいね。"); }
+    function manualHatsuAction() { if(!isTracking) return; sessionData.manualFirstComments++; lastManualFirstActionTime = Date.now(); hasWarned30SecHatsu = false; lastHatsuAlertMin = -1; const m=document.getElementById('hatsu-msg'); m.innerText="初見様、来てくれてありがとう\nゆっくりしていってくださいね"; m.classList.add('pop-msg'); setTimeout(()=>m.classList.remove('pop-msg'),5000); speakText("しょけんさま、きてくださって、本当にありがとうございます。ゆっくりしていってくださいね。"); }
     function adjustFirst(a) { if(!isTracking) return; sessionData.manualFirstComments += a; if (sessionData.manualFirstComments < 0) sessionData.manualFirstComments = 0; }
     async function demoSimulate() { const add = Math.floor(Math.random() * 4); if(add > 0) { sessionData.totalComments += add; lastCommentReceivedTime = Date.now(); } sessionData.currentViewers += Math.floor(Math.random() * 5) - 2; if(sessionData.currentViewers < 0) sessionData.currentViewers = 0; if(!isManualSub && Math.random() > 0.8) sessionData.currentSubCount += 1; }
     function adjustSub(a) { if(!isTracking) return; sessionData.currentSubCount += a; }
@@ -849,6 +911,26 @@
     function addApiQuota(a) { if(document.getElementById('demoModeCheck').checked) return; const u = JSON.parse(localStorage.getItem(QUOTA_KEY) || "{}"); const t = new Date().toDateString(); u[t] = (u[t]||0) + a; localStorage.setItem(QUOTA_KEY, JSON.stringify(u)); displayApiQuota(); }
     function checkQuotaSafe() { if(document.getElementById('demoModeCheck').checked) return true; const u = JSON.parse(localStorage.getItem(QUOTA_KEY) || "{}"); return (u[new Date().toDateString()] || 0) < 10000; }
     function checkDstAndDisplayResetTime() { const n = new Date(); const isDst = n.getTimezoneOffset() < Math.max(new Date(n.getFullYear(),0,1).getTimezoneOffset(), new Date(n.getFullYear(),6,1).getTimezoneOffset()); const rh = isDst ? 16 : 17; if(document.getElementById('apiResetTimeDisplay')) document.getElementById('apiResetTimeDisplay').innerText = `${rh}:00 (JST)`; return rh; }
+    
+    // 音声リスト取得
+    function populateVoiceList() {
+        if(typeof speechSynthesis === 'undefined') return;
+        const voices = speechSynthesis.getVoices();
+        const sel = document.getElementById('voiceSourceSelector');
+        sel.innerHTML = '<option value="">(端末の標準音声)</option>';
+        voices.forEach((v, i) => {
+            if(v.lang.includes('ja') || v.lang.includes('JP')) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = `${v.name} (${v.lang})`;
+                sel.appendChild(opt);
+            }
+        });
+    }
+    if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = populateVoiceList;
+    }
+
     async function previewVideo() { 
         refreshApiKeys(); 
         const u=document.getElementById('url').value; const id=extractVideoId(u); if(!id) return alert("URL不正"); 
