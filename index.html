@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jewel Ocean: Perfect Voice Fix</title>
+    <title>Jewel Ocean: Auto-Learning CPM</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
     <style>
-        /* --- デザイン定義 --- */
+        /* --- デザイン定義 (前回のままOBS対応済み) --- */
         :root {
             --bg-grad-1: #a18cd1; --bg-grad-2: #fbc2eb;
             --glass-bg: rgba(255, 255, 255, 0.95); --glass-border: rgba(255, 255, 255, 0.6);
@@ -46,7 +46,7 @@
         
         .input-group { margin-bottom: 20px; position: relative; }
         .input-group label { display: block; font-weight: 700; font-size: 1.05rem; margin-bottom: 8px; color: var(--text-main); }
-        .input-group input { width: 100%; padding: 16px; font-size: 1.1rem; border: 2px solid #dfe6e9; border-radius: 16px; background: rgba(255,255,255,0.9); transition: 0.3s; font-family: inherit; box-sizing: border-box; }
+        .input-group input, .input-group select { width: 100%; padding: 16px; font-size: 1.1rem; border: 2px solid #dfe6e9; border-radius: 16px; background: rgba(255,255,255,0.9); transition: 0.3s; font-family: inherit; box-sizing: border-box; }
         .input-group textarea { width: 100%; padding: 16px; padding-right: 50px; font-size: 0.95rem; border: 2px solid #dfe6e9; border-radius: 16px; background: rgba(255,255,255,0.9); font-family: "Roboto Mono", monospace; box-sizing: border-box; height: 100px; resize: vertical; line-height: 1.4; }
         
         .api-hidden { -webkit-text-security: disc; } 
@@ -104,16 +104,42 @@
 
         .obs-toggle { text-align: right; margin-bottom: 10px; }
         
-        /* --- OBSモードの調整 --- */
+        /* OBSモード (横並び・全画面) */
         body.obs-mode { 
             background: transparent; 
-            padding: 0; 
-            padding-top: 60px; /* 余白追加 */
+            padding: 0; margin: 0;
+            overflow: hidden; /* スクロール禁止 */
+            height: 100vh; width: 100vw;
         }
-        body.obs-mode .bubbles, body.obs-mode .setting-wrap, body.obs-mode .history-wrap, body.obs-mode .status-bar { display: none; }
-        body.obs-mode .obs-toggle { position: fixed; top: 10px; right: 10px; opacity: 0.2; transition: opacity 0.3s; }
+        body.obs-mode .bubbles, body.obs-mode .setting-wrap, body.obs-mode .history-wrap, body.obs-mode .status-bar, body.obs-mode .control-area, body.obs-mode .sound-setting, body.obs-mode .sub-manual-controls { display: none !important; }
+        body.obs-mode .obs-toggle { position: fixed; top: 10px; right: 10px; opacity: 0.1; transition: opacity 0.3s; z-index: 99999; }
         body.obs-mode .obs-toggle:hover { opacity: 1; }
-        body.obs-mode .glass-card.score-card { margin: 0; border: 6px solid var(--accent-color); background: rgba(255,255,255,0.95); }
+        body.obs-mode .container { max-width: 100%; margin: 0; padding: 20px; height: 100%; box-sizing: border-box; }
+        body.obs-mode .glass-card.score-card { 
+            margin: 0; 
+            border: 6px solid var(--accent-color); 
+            background: rgba(255,255,255,0.95); 
+            height: calc(100vh - 40px);
+            box-sizing: border-box;
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            grid-template-rows: 1fr;
+            gap: 20px;
+            align-content: stretch;
+            padding: 20px;
+        }
+        body.obs-mode .score-wrapper { display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        body.obs-mode .score-value { font-size: 12vw; margin: 0; filter: drop-shadow(0 8px 12px rgba(108, 92, 231, 0.3)); }
+        body.obs-mode .session-badge { font-size: 1.5rem; padding: 10px 30px; }
+        body.obs-mode .timer-display-area { display: flex; flex-direction: column; width: 100%; gap: 15px; margin-top: 20px; }
+        body.obs-mode .timer-box { display: none; padding: 15px; border-width: 6px; }
+        body.obs-mode .timer-box.active { display: block; }
+        body.obs-mode .timer-time { font-size: 4rem; margin: 5px 0; }
+        body.obs-mode .stats-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; margin: 0; height: 100%; }
+        body.obs-mode .stat-box { padding: 10px; justify-content: center; }
+        body.obs-mode .stat-num { font-size: 4vw; }
+        body.obs-mode .stat-label { font-size: 1.2rem; }
+        body.obs-mode .btn-manual, body.obs-mode .btn-adj { display: none; }
         
         .status-bar { padding: 16px; background: #fff; border-radius: 16px; text-align: center; font-weight: bold; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .status-ok { color: #00b894; border: 2px solid #00b894; background: #edfbf7; }
@@ -137,11 +163,9 @@
         .volume-control { display: flex; align-items: center; gap: 8px; }
         .btn-test { background: #b2bec3; padding: 6px 12px; font-size: 0.85rem; border-radius: 20px; color: white; border: none; cursor: pointer; }
         
-        /* スライダーを長くする */
         input[type=range] { width: 250px; cursor: pointer; }
         @media (max-width: 500px) { input[type=range] { width: 150px; } }
         
-        /* Voice Selector */
         .voice-box { display: flex; flex-direction: column; gap: 5px; width: 100%; max-width: 250px; }
         .voice-select { padding: 8px; border-radius: 10px; border: 1px solid #ccc; font-size: 0.9rem; width: 100%; }
 
@@ -149,12 +173,10 @@
         .api-bar-bg { width: 100px; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
         .api-bar-fill { height: 100%; background: #00b894; width: 0%; transition: width 0.3s; }
         
-        /* 計測中モード */
         body.tracking .setting-wrap { opacity: 0.5; pointer-events: none; filter: grayscale(0.8); transition: 0.5s; }
         body.tracking .btn-start { display: none !important; }
         body.tracking .btn-stop { display: block !important; }
 
-        /* モーダル */
         .modal-ol { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:99999; justify-content:center; align-items:center; backdrop-filter:blur(5px); }
         .modal-in { background:#fff; width:90%; max-width:600px; padding:30px; border-radius:24px; max-height:85vh; overflow-y:auto; box-shadow:0 20px 50px rgba(0,0,0,0.3); }
     </style>
@@ -165,16 +187,16 @@
 
 <div class="container">
     <div class="obs-toggle">
-        <button class="btn-obs" onclick="toggleObs()">✨ OBSモード切替 (背景透過)</button>
+        <button class="btn-obs" onclick="toggleObs()">✨ OBSモード切替 (横並び)</button>
     </div>
 
     <div id="statusBox" class="status-bar" style="color:#636e72;">
-        👋 準備OK！設定を入力してね
+        👋 準備OK！URLを入れると自動判定します
     </div>
 
     <div class="glass-card setting-wrap">
         <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 20px;">
-            <h2 style="margin:0; border:none;">⚙️ 配信設定</h2>
+            <h2 style="margin:0; border:none;">⚙️ 自動学習＆計測</h2>
             <div class="api-meter">
                 <span>API消費(PT):</span>
                 <div class="api-bar-bg"><div id="apiBar" class="api-bar-fill"></div></div>
@@ -203,6 +225,11 @@
                     <label>⏱️ 目標時間 (時間)</label>
                     <input type="number" id="targetHours" value="4" min="0.5" step="0.5" oninput="updateForecast()" onkeyup="updateForecast()" onchange="updateForecast()">
                 </div>
+                <div class="input-group" style="background:#f1f2f6; padding:10px; border-radius:12px;">
+                    <label style="font-size:0.9rem; margin-bottom:5px;">🤖 自動判定ジャンル:</label>
+                    <div id="detectedGenre" style="font-weight:bold; color:#6c5ce7;">(URL入力待ち...)</div>
+                </div>
+
                 <div class="input-group">
                     <label>🛡️ 更新間隔 (Auto)</label>
                     <div style="display:flex; gap:10px; align-items:center; padding: 16px 0;">
@@ -256,7 +283,6 @@
                 <label class="cond-label" style="color:#0984e3;"><input type="checkbox" id="cond_low_viewers" checked> (5) 同接維持タイマー</label>
                 <span>：同接 <input type="number" id="resetViewerThreshold" value="10" style="width:50px"> 人以下が <input type="number" id="resetDurationMinutes" value="5" step="0.1" style="width:50px"> 分続くと終了</span>
             </div>
-            <div style="font-size:0.85rem; color:#636e72; margin-top:5px;">※どれか一つでも条件を満たすと終了します。タイマーは -10秒 で終了。</div>
         </div>
 
         <div class="setting-grid">
@@ -281,25 +307,27 @@
     </div>
 
     <div class="glass-card score-card">
-        <div style="text-align:center;">
-            <span class="session-badge">🔥 <span id="challengeCount">1回目</span> の挑戦</span>
-            <div style="font-size:0.9rem; color:var(--text-sub); margin-top:5px;">( 前回スコア: <span id="prevScore" style="font-weight:bold;">--</span> pt )</div>
-        </div>
-        <div class="score-area">
-            <div class="score-title">✨ TOTAL POINTS ✨</div>
-            <div id="totalPoints" class="score-value">0</div>
-        </div>
-
-        <div class="timer-display-area" id="timerArea">
-            <div id="timer-hatsu" class="timer-box" onclick="manualHatsuAction()">
-                <div class="timer-label">初コメ耐久 (Click Reset)</div>
-                <div class="timer-time" id="hatsu-time">--:--</div>
-                <div class="timer-msg" id="hatsu-msg">コメント待ち...</div>
+        <div class="score-wrapper">
+            <div style="text-align:center;">
+                <span class="session-badge">🔥 <span id="challengeCount">1回目</span> の挑戦</span>
+                <div style="font-size:0.9rem; color:var(--text-sub); margin-top:5px;">( 前回スコア: <span id="prevScore" style="font-weight:bold;">--</span> pt )</div>
             </div>
-            <div id="timer-dousetsu" class="timer-box">
-                <div class="timer-label">同接維持</div>
-                <div class="timer-time" id="dousetsu-time">--:--</div>
-                <div class="timer-msg" id="dousetsu-msg">維持してね！</div>
+            <div class="score-area">
+                <div class="score-title">✨ TOTAL POINTS ✨</div>
+                <div id="totalPoints" class="score-value">0</div>
+            </div>
+
+            <div class="timer-display-area" id="timerArea">
+                <div id="timer-hatsu" class="timer-box" onclick="manualHatsuAction()">
+                    <div class="timer-label">初コメ耐久 (Click Reset)</div>
+                    <div class="timer-time" id="hatsu-time">--:--</div>
+                    <div class="timer-msg" id="hatsu-msg">コメント待ち...</div>
+                </div>
+                <div id="timer-dousetsu" class="timer-box">
+                    <div class="timer-label">同接維持</div>
+                    <div class="timer-time" id="dousetsu-time">--:--</div>
+                    <div class="timer-msg" id="dousetsu-msg">維持してね！</div>
+                </div>
             </div>
         </div>
 
@@ -307,7 +335,7 @@
             <div class="stat-box">
                 <span class="stat-num" id="dispSubsVal">0</span>
                 <span class="stat-sub" id="dispSubsInc">(+0)</span>
-                <div id="subManualControls" style="margin-top:10px; display:none;">
+                <div id="subManualControls" class="sub-manual-controls" style="margin-top:10px; display:none;">
                     <button class="btn-adj btn-minus" onclick="adjustSub(-1)" type="button">-</button>
                     <button class="btn-adj btn-plus" onclick="adjustSub(1)" type="button">+</button>
                 </div>
@@ -384,14 +412,25 @@
     const API_KEY_ELEMENT_ID = "apiKey";
     const HISTORY_KEY = "yt_endurance_v55_final_voiceselect";
     const QUOTA_KEY = "yt_api_quota_pt_v1";
-    const CHANNEL_TREND_KEY = "yt_channel_trends_v2";
     
-    // 定数: 上限70秒
+    // データ保存キー：個人別詳細データ & 全体統計
+    const DATABASE_KEY = "yt_personal_database_v1"; 
+    const GLOBAL_STATS_KEY = "yt_global_stats_v1";
+
     const API_KEY_LIMIT_MS = 3000; 
     const BATCH_TARGET = 1800;
     const NO_COMMENT_LIMIT_MS = 30 * 60 * 1000;
     const MAX_POLLING_ACTIVE = 70000; 
     const MAX_POLLING_IDLE = 70000;
+
+    // カテゴリIDの簡易マッピング（主要なもののみ）
+    const videoCategories = {
+        '1': 'Film & Animation', '2': 'Autos & Vehicles', '10': 'Music', '15': 'Pets & Animals',
+        '17': 'Sports', '20': 'Gaming', '22': 'People & Blogs', '23': 'Comedy',
+        '24': 'Entertainment', '25': 'News & Politics', '26': 'Howto & Style',
+        '27': 'Education', '28': 'Science & Technology'
+    };
+    function getGenreName(id) { return videoCategories[id] || `Others(${id})`; }
 
     let isTracking = false;
     let isFinishing = false;
@@ -401,7 +440,10 @@
     let calculatedZInterval = 10000;
     let youtubeSuggestedInterval = 5000;
     let lastFetchTime = 0;
-    let channelTrends = {}; 
+    
+    let personalDatabase = {}; // { channelId: { name: "Aさん", genres: { "Gaming": [0,0,500...24個] } } }
+    let globalStats = {};      // { "Gaming": { totalCPM: 1000, count: 50, avgSubs: 100000 } }
+    
     let sessionData = { startTime: null, startSubCount: 0, currentSubCount: 0, totalComments: 0, manualFirstComments: 0, currentViewers: 0 };
     
     let lastManualFirstActionTime = 0; 
@@ -415,6 +457,9 @@
     let lastCommentReceivedTime = 0;
 
     let videoId = "", channelId = "", liveChatId = null, nextPageToken = null;
+    let currentGenreName = "Unknown"; // 自動判定されたジャンル
+    let currentChannelName = "";
+    
     let isDemo = false, isManualSub = true;
     let apiKeys = [];
     let currentKeyIndex = 0;
@@ -428,17 +473,15 @@
         updateSessionInfo();
         displayApiQuota(); 
         updateVisibility(); 
-        loadTrendsFromStorage(); 
+        loadDatabase(); // データベース読み込み
         updateForecast(); 
         populateVoiceList();
         
-        // 音量初期化
         const slider = document.getElementById('volumeSlider');
         const display = document.getElementById('volValue');
         globalVolume = parseFloat(slider.value);
         display.innerText = Math.round(globalVolume * 100) + "%";
         
-        // イベントリスナー登録 (window.onload内で行うことで確実に動作させる)
         slider.addEventListener('input', function(e) {
             globalVolume = parseFloat(e.target.value);
             display.innerText = Math.round(globalVolume * 100) + "%";
@@ -447,7 +490,75 @@
         requestAnimationFrame(updateVisualsLoop); 
     };
     
-    // 音声リスト取得
+    // --- データベース管理 (軽量JSON) ---
+    function loadDatabase() {
+        try {
+            personalDatabase = JSON.parse(localStorage.getItem(DATABASE_KEY) || "{}");
+            globalStats = JSON.parse(localStorage.getItem(GLOBAL_STATS_KEY) || "{}");
+        } catch(e) { console.error("DB Load Error", e); personalDatabase={}; globalStats={}; }
+    }
+    function saveDatabase() {
+        try {
+            localStorage.setItem(DATABASE_KEY, JSON.stringify(personalDatabase));
+            localStorage.setItem(GLOBAL_STATS_KEY, JSON.stringify(globalStats));
+        } catch(e) { console.error("DB Save Error", e); }
+    }
+    
+    // 記録更新ロジック: その人の・そのジャンルの・その時間の最高記録を更新
+    function updateChannelStats(cid, cname, genre, currentCPM) {
+        if (!personalDatabase[cid]) personalDatabase[cid] = { name: cname, genres: {} };
+        if (!personalDatabase[cid].genres[genre]) personalDatabase[cid].genres[genre] = new Array(24).fill(0);
+        
+        // 個人記録の更新
+        const h = new Date().getHours();
+        if (currentCPM > personalDatabase[cid].genres[genre][h]) {
+            personalDatabase[cid].genres[genre][h] = Math.round(currentCPM);
+        }
+        
+        // 全体統計の更新（シンプルに加算平均用）
+        if (!globalStats[genre]) globalStats[genre] = { totalCPM: 0, count: 0 };
+        // ※あまり頻繁に足すと偏るので、セッション終了時などにまとめてやるのがベターだが、
+        // ここでは簡易的に「新しいCPMが出るたびに」少し学習させる（実際はfinishSessionでやる方が綺麗）
+        
+        saveDatabase();
+    }
+    
+    // 予測ロジック
+    function predictCPM(cid, genre, subs) {
+        // 1. その人の過去データがあるか？
+        if (personalDatabase[cid] && personalDatabase[cid].genres[genre]) {
+            // その時間帯の最大値、もしくは全体の平均を取る
+            const h = new Date().getHours();
+            let val = personalDatabase[cid].genres[genre][h];
+            if (val > 0) return { val: val, source: "個人履歴" };
+            
+            // その時間のデータがなければ、そのジャンルの平均
+            const valid = personalDatabase[cid].genres[genre].filter(v => v > 0);
+            if (valid.length > 0) {
+                const avg = valid.reduce((a,b)=>a+b,0) / valid.length;
+                return { val: avg, source: "個人平均" };
+            }
+        }
+        
+        // 2. なければ全体統計から「登録者数あたりのCPM」で推測
+        // (仮定: 1000人あたり0.5CPM程度をベースに、ジャンル係数を掛ける)
+        let baseRatio = 0.0005; // デフォルト係数
+        if (genre.includes("Gaming")) baseRatio = 0.0015; // ゲームはコメント多い
+        if (genre.includes("Music")) baseRatio = 0.0008;
+        if (genre.includes("People")) baseRatio = 0.0003; // 雑談は長いのでCPMは低めに出がち
+        
+        // 全体統計データがあればそれを使う
+        if (globalStats[genre] && globalStats[genre].count > 0) {
+            const avgGenreCPM = globalStats[genre].totalCPM / globalStats[genre].count;
+            // ここで登録者数を考慮できればベストだが、今回は簡易的に「ジャンル平均CPM」を返す
+            return { val: avgGenreCPM, source: "ジャンル平均" };
+        }
+
+        // 3. データなし：数式予測
+        return { val: subs * baseRatio, source: "新規推測" };
+    }
+
+    // --- 音声 & UI ---
     function populateVoiceList() {
         if(typeof speechSynthesis === 'undefined') return;
         const voices = speechSynthesis.getVoices();
@@ -466,7 +577,7 @@
         speechSynthesis.onvoiceschanged = populateVoiceList;
     }
 
-    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") saveTrendsToStorage(); });
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") saveDatabase(); });
     document.getElementById('cond_no_first').addEventListener('change', updateVisibility);
     document.getElementById('cond_low_viewers').addEventListener('change', updateVisibility);
 
@@ -485,94 +596,61 @@
         let keys = raw.split(/[\n,\s]+/).filter(k => k.trim().length > 0);
         return [...new Set(keys)];
     }
-    
-    function refreshApiKeys() {
-        apiKeys = getApiKeys();
-        if(currentKeyIndex >= apiKeys.length) currentKeyIndex = 0;
-    }
-    
-    function getNextApiKey() {
-        if (apiKeys.length === 0) return "";
-        const key = apiKeys[currentKeyIndex];
-        currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
-        return key;
-    }
+    function refreshApiKeys() { apiKeys = getApiKeys(); if(currentKeyIndex >= apiKeys.length) currentKeyIndex = 0; }
+    function getNextApiKey() { if (apiKeys.length === 0) return ""; const key = apiKeys[currentKeyIndex]; currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length; return key; }
 
-    function getDailyLimitPerKey(z) {
-        if (z <= 6) return 9800;
-        if (z <= 19) return 9000;
-        return 8500;
-    }
-
+    function getDailyLimitPerKey(z) { if (z <= 6) return 9800; if (z <= 19) return 9000; return 8500; }
     function calculateMaxDailyHours(targetHours) {
-        const now = new Date();
-        const resetHour = checkDstAndDisplayResetTime();
-        let resetTime = new Date(now);
-        resetTime.setHours(resetHour, 0, 0, 0);
-        if (now >= resetTime) resetTime.setDate(resetTime.getDate() + 1);
+        const now = new Date(); const resetHour = checkDstAndDisplayResetTime(); let resetTime = new Date(now); resetTime.setHours(resetHour, 0, 0, 0); if (now >= resetTime) resetTime.setDate(resetTime.getDate() + 1);
         const hoursUntilReset = (resetTime - now) / (1000 * 60 * 60);
         if (targetHours <= hoursUntilReset) return targetHours;
         const remaining = targetHours - hoursUntilReset;
-        if (remaining >= 24) return 24;
-        return Math.max(hoursUntilReset, remaining);
+        if (remaining >= 24) return 24; return Math.max(hoursUntilReset, remaining);
     }
 
-    function updateForecast() {
+    async function updateForecast() {
         refreshApiKeys();
-        const isAi = document.getElementById('autoSpeedCheck').checked;
         const display = document.getElementById('chatIntervalDisplay');
         const box = document.getElementById('aiForecastBox');
         
+        // URLからID抽出だけ試みる（まだAPIは叩かない）
+        const urlVal = document.getElementById('url').value;
+        const tempVid = extractVideoId(urlVal);
+        
+        if (tempVid && apiKeys.length > 0) {
+            // プレビュー的に情報を取得してジャンル判定（1回だけ）
+            // ※ここは頻繁に呼ばれると消費するので、ボタン押下時などのほうが良いが、利便性重視で実装
+            // 今回は「計測スタート」時、またはユーザーが明示的にチェックした時に確定する形にする
+            // ここでは表示のみ更新
+        }
+
         const h = parseFloat(document.getElementById('targetHours').value);
         if(!h || h <= 0) { display.innerText = "--"; return; }
 
         const calcKeyCount = Math.max(1, apiKeys.length);
         const minPhysicalMs = API_KEY_LIMIT_MS / calcKeyCount; 
-
         const z = calculateMaxDailyHours(h);
         const limitPerKey = getDailyLimitPerKey(z);
         const totalDailyLimit = limitPerKey * calcKeyCount;
         const pointsPerHour = totalDailyLimit / (z + 4);
         const safeIntervalSec = (3600 * 5) / pointsPerHour;
         calculatedZInterval = safeIntervalSec * 1000;
-        
         if (calculatedZInterval < minPhysicalMs) calculatedZInterval = minPhysicalMs;
-
-        let estimatedCPM = 50; 
-        let maxPastCPM = 0;
-        Object.values(channelTrends).forEach(hourlyAry => {
-            if(Array.isArray(hourlyAry)) hourlyAry.forEach(v => { if(v>maxPastCPM) maxPastCPM=v; });
-        });
-        if(maxPastCPM > 0) estimatedCPM = maxPastCPM;
-        
-        let secondsToFill1800 = (1800 / Math.max(1, estimatedCPM)) * 60;
-        let neededKeys = Math.ceil(3.0 / secondsToFill1800);
-        if(neededKeys < 1) neededKeys = 1;
 
         let msg = `🤖 <b>AI分析:</b><br>`;
         msg += `・目標: ${h}時間 (Z=${z.toFixed(1)}h / 上限${limitPerKey}pt)<br>`;
-        msg += `・Z+4基準: <b>${(calculatedZInterval/1000).toFixed(1)}秒</b>間隔<br>`;
-        msg += `・過去最大勢い: 約${Math.round(estimatedCPM)} CPM (推定)<br>`;
-        
-        if (apiKeys.length === 0) {
-             msg += `<span style="color:#e74c3c; font-weight:bold;">⚠️ キー未入力 (仮定計算)</span>`;
-        } else if(apiKeys.length < neededKeys) {
-            msg += `<span style="color:#e74c3c; font-weight:bold;">⚠️ キー不足の可能性 (推奨: ${neededKeys}個以上)</span>`;
-        } else {
-            msg += `<span style="color:#00b894; font-weight:bold;">✅ 現在のキー数(${apiKeys.length}個)で十分対応可能です</span>`;
-        }
+        msg += `・安全間隔: <b>${(calculatedZInterval/1000).toFixed(1)}秒</b><br>`;
         
         box.style.display = "block";
         box.innerHTML = msg;
 
-        if(isAi) {
-            display.innerHTML = `🤖 Auto: <b>${(minPhysicalMs/1000).toFixed(2)}s</b> 〜 <b>${(calculatedZInterval/1000).toFixed(1)}s</b> (Max70s)`;
+        if(document.getElementById('autoSpeedCheck').checked) {
+            display.innerHTML = `🤖 Auto: <b>${(minPhysicalMs/1000).toFixed(2)}s</b> 〜 <b>${(calculatedZInterval/1000).toFixed(1)}s</b>`;
             display.style.color = "#6c5ce7";
         } else {
-            display.innerText = `🛡️ Z+4固定: ${(calculatedZInterval/1000).toFixed(1)}秒間隔`;
+            display.innerText = `🛡️ 固定: ${(calculatedZInterval/1000).toFixed(1)}秒`;
             display.style.color = "#00b894";
         }
-        
         displayApiQuota();
     }
 
@@ -581,7 +659,6 @@
         if (isTracking) return;
 
         refreshApiKeys(); 
-        
         if(!document.getElementById('demoModeCheck').checked && apiKeys.length === 0) return alert("APIキーを入力してください");
         if (!checkQuotaSafe()) return alert("API上限のため開始できません");
 
@@ -627,6 +704,8 @@
     async function initSession() {
         if(isDemo) { 
             sessionData = { startTime: new Date(), startSubCount: 10000, currentSubCount: 10000, totalComments: 0, manualFirstComments: 0, currentViewers: 50 }; 
+            currentGenreName = "DemoGame";
+            document.getElementById('detectedGenre').innerText = "🧪 Demo Mode";
             currentPollingInterval = 3000;
             return; 
         }
@@ -638,7 +717,13 @@
         
         liveChatId = v.liveStreamingDetails.activeLiveChatId; 
         channelId = v.snippet.channelId;
+        currentChannelName = v.snippet.channelTitle;
         
+        // ジャンル自動判定
+        const catId = v.snippet.categoryId;
+        currentGenreName = getGenreName(catId);
+        document.getElementById('detectedGenre').innerText = `📺 ${currentGenreName} (ID:${catId})`;
+
         const key2 = getNextApiKey();
         const c = await fetchChannelDetails(channelId, key2);
         
@@ -652,22 +737,19 @@
         nextPageToken = null;
 
         refreshApiKeys();
-        updateForecast(); 
         
-        let startMs = calculatedZInterval;
-        let predictedCPM = 0;
-        if (channelId && channelTrends[channelId]) {
-            const h = new Date().getHours();
-            predictedCPM = channelTrends[channelId][h] || 0;
-        }
-        if (predictedCPM === 0) predictedCPM = Math.max(10, initialSub * 0.001); 
+        // --- ここで予測ロジック発動 ---
+        const prediction = predictCPM(channelId, currentGenreName, initialSub);
+        const predictedCPM = prediction.val;
+        const predSource = prediction.source;
 
+        let startMs = calculatedZInterval;
         if (predictedCPM > 0) {
             const historyMs = (BATCH_TARGET / predictedCPM) * 60000;
             startMs = Math.max(startMs, historyMs * 0.8);
-            setStatus(`📜 予測起動: ${(startMs/1000).toFixed(1)}s で開始`, "active");
+            setStatus(`📜 ${predSource}から予測: CPM${Math.round(predictedCPM)} (間隔${(startMs/1000).toFixed(1)}s)`, "active");
         } else {
-            setStatus(`🆕 初見起動: Z基準 ${(startMs/1000).toFixed(1)}s で開始`, "grace");
+            setStatus(`🆕 データなし: 安全基準 ${(startMs/1000).toFixed(1)}s で開始`, "grace");
         }
 
         const keyCount = Math.max(1, apiKeys.length);
@@ -704,7 +786,8 @@
                 const realCPM = realRatePerMs * 60000;
                 
                 if(!isDemo && itemCount > 0 && realCPM < 20000) {
-                    updateTrendData(Math.round(realCPM));
+                    // 自動学習: CPMを記録更新
+                    updateChannelStats(channelId, currentChannelName, currentGenreName, realCPM);
                 }
 
                 if(document.getElementById('autoSpeedCheck').checked) {
@@ -766,24 +849,12 @@
     }
     function lerp(s, e, f) { let d = e - s; if (Math.abs(d) < 0.5) return e; return s + (d * f); }
     
-    function loadTrendsFromStorage() { 
-        try { 
-            channelTrends = JSON.parse(localStorage.getItem(CHANNEL_TREND_KEY) || "{}");
-            for(let cid in channelTrends) {
-                if(Array.isArray(channelTrends[cid])) {
-                    channelTrends[cid] = channelTrends[cid].map(v => v > 20000 ? 0 : v);
-                }
-            }
-        } catch(e) { channelTrends = {}; } 
-    }
-    function saveTrendsToStorage() { try { localStorage.setItem(CHANNEL_TREND_KEY, JSON.stringify(channelTrends)); } catch(e) { console.error("Save failed", e); } }
-    function resetTrends() { if(confirm("AIの学習データ(CPM)をリセットしますか？")){ channelTrends={}; saveTrendsToStorage(); updateForecast(); alert("学習データをリセットしました"); } }
-    function updateTrendData(cpm) {
-        if (!channelId) return;
-        const currentHour = new Date().getHours();
-        if (!channelTrends[channelId]) channelTrends[channelId] = new Array(24).fill(0);
-        const old = channelTrends[channelId][currentHour] || cpm;
-        channelTrends[channelId][currentHour] = Math.round((old * 0.7) + (cpm * 0.3));
+    // DBリセット
+    function resetTrends() { 
+        if(confirm("蓄積した学習データ(個人履歴・統計)を全て削除しますか？")){ 
+            personalDatabase={}; globalStats={};
+            saveDatabase(); alert("データをリセットしました"); 
+        } 
     }
 
     function checkConditionsAndTimer() {
@@ -813,7 +884,6 @@
             const th = parseInt(document.getElementById('resetViewerThreshold').value);
             const limitMs = parseFloat(document.getElementById('resetDurationMinutes').value) * 60 * 1000;
             if (sessionData.currentViewers <= th) {
-                // ■ 修正: 下回った瞬間に喋る
                 if (!dousetsuDropStartTime) {
                     dousetsuDropStartTime = now;
                     speakText("同接が、目標を下回りました");
@@ -855,20 +925,15 @@
     function initAudio() { if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if(audioCtx.state === 'suspended') audioCtx.resume(); }
     function playVolumeTest() { initAudio(); speakText("この音量でいいですか？"); setTimeout(playBeepSound, 2000); }
     
-    // Voice Logic
     function speakText(text) { 
         if (!document.getElementById('soundEnabled').checked) return; 
         window.speechSynthesis.cancel(); 
         const msg = new SpeechSynthesisUtterance(text); 
         msg.lang = "ja-JP"; 
         msg.volume = Math.min(globalVolume, 1.0); 
-        
         const voices = speechSynthesis.getVoices();
         const selectedIndex = document.getElementById('voiceSourceSelector').value;
-        if(selectedIndex && voices[selectedIndex]) {
-            msg.voice = voices[selectedIndex];
-        }
-
+        if(selectedIndex && voices[selectedIndex]) msg.voice = voices[selectedIndex];
         const type = document.getElementById('voiceTypeSelector').value;
         switch(type) {
             case 'kawaii': msg.pitch = 1.1; msg.rate = 1.2; break;
@@ -892,7 +957,17 @@
     async function finishSession(reason) {
         if(!isTracking || isFinishing) return; isFinishing = true; 
         if(checkInterval) clearInterval(checkInterval); 
-        saveTrendsToStorage();
+        
+        // 終了時、全体統計に今回の平均CPMを学習させる
+        const durationMin = (Date.now() - sessionData.startTime.getTime()) / 60000;
+        if(durationMin > 1 && !isDemo) {
+            const avgCPM = sessionData.totalComments / durationMin;
+            if(!globalStats[currentGenreName]) globalStats[currentGenreName] = { totalCPM:0, count:0 };
+            globalStats[currentGenreName].totalCPM += avgCPM;
+            globalStats[currentGenreName].count++;
+            saveDatabase();
+        }
+        
         setStatus("📊 集計中...", "warn");
         if(!isDemo) { try { await updateStatsSingle(); const k=getNextApiKey(); await fetchComments(k); if(!isManualSub){ const k2=getNextApiKey(); const c=await fetchChannelDetails(channelId, k2); sessionData.currentSubCount=parseInt(c.statistics.subscriberCount); } } catch(e){} }
         isTracking = false; document.body.classList.remove('tracking'); document.getElementById('subManualControls').style.display = 'none';
@@ -937,8 +1012,12 @@
             if(!k)return alert("APIキーなし"); 
             const v=await fetchVideoDetails(id,k); 
             document.getElementById('vcThumb').src=v.snippet.thumbnails.default.url; document.getElementById('vcTitle').innerText=v.snippet.title; document.getElementById('vcChannel').innerText=v.snippet.channelTitle; document.getElementById('videoCard').style.display="flex"; 
+            // プレビュー時点でもジャンル判定
+            const catId = v.snippet.categoryId;
+            const gn = getGenreName(catId);
+            document.getElementById('detectedGenre').innerText = `📺 ${gn} (ID:${catId})`;
         }catch(e){alert("取得失敗:"+e.message);} 
     }
 </script>
 </body>
-</html>
+                                             </html>
