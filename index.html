@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jewel Ocean: ID-Based Learning</title>
+    <title>Jewel Ocean: ID-Learning & Full-OBS</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
     <style>
-        /* --- ベースデザイン --- */
+        /* --- デザイン定義 (基本はそのまま) --- */
         :root {
             --bg-grad-1: #a18cd1; --bg-grad-2: #fbc2eb;
             --glass-bg: rgba(255, 255, 255, 0.95); --glass-border: rgba(255, 255, 255, 0.6);
@@ -104,58 +104,111 @@
 
         .obs-toggle { text-align: right; margin-bottom: 10px; }
         
-        /* OBSモード (横並び・サイズ修正版) */
+        /* --- OBSモード (改善版: 全部入り・横並び・はみ出し防止) --- */
         body.obs-mode { 
             background: transparent; 
-            padding: 20px; margin: 0;
-            overflow: hidden; 
+            padding: 0; margin: 0;
+            overflow: hidden; /* はみ出し防止 */
             height: 100vh; width: 100vw;
             box-sizing: border-box;
         }
-        body.obs-mode .bubbles, body.obs-mode .setting-wrap, body.obs-mode .history-wrap, body.obs-mode .status-bar, body.obs-mode .control-area, body.obs-mode .sound-setting, body.obs-mode .sub-manual-controls { display: none !important; }
+        
+        /* OBSモードで不要なものを隠す */
+        body.obs-mode .bubbles, body.obs-mode .setting-wrap, body.obs-mode .history-wrap, body.obs-mode .status-bar, body.obs-mode .video-card { display: none !important; }
+        
+        /* OBS切替ボタンは薄く表示 */
         body.obs-mode .obs-toggle { position: fixed; top: 10px; right: 10px; opacity: 0.1; transition: opacity 0.3s; z-index: 99999; }
         body.obs-mode .obs-toggle:hover { opacity: 1; }
-        body.obs-mode .container { max-width: 100%; margin: 0; height: 100%; }
         
-        /* OBS時のカードデザイン */
+        body.obs-mode .container { max-width: 100%; margin: 0; height: 100%; padding: 20px; box-sizing: border-box; }
+        
+        /* OBS用グリッドレイアウト */
         body.obs-mode .glass-card.score-card { 
             margin: 0; 
             border: 6px solid var(--accent-color); 
             background: rgba(255,255,255,0.95); 
-            height: 100%;
+            height: 100%; /* 全画面 */
+            width: 100%;
             box-sizing: border-box;
             display: grid;
-            grid-template-columns: 1fr 1.2fr;
+            grid-template-columns: 1fr 1.3fr; /* 左:スコア 右:ステータス&操作 */
             grid-template-rows: 1fr;
             gap: 20px;
             align-content: stretch;
             padding: 20px;
         }
-        
-        /* フォントサイズを「前くらい（常識的な大きさ）」に戻す */
-        body.obs-mode .score-wrapper { display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        
-        /* 以前の特大12vwから、固定の大きめサイズ(5remなど)に変更 */
+
+        /* --- 左側エリア: スコア & タイマー --- */
+        body.obs-mode .score-wrapper {
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            height: 100%;
+        }
+        body.obs-mode .score-title { font-size: 1.2rem; margin-bottom: 0; }
         body.obs-mode .score-value { 
             font-size: 6rem; /* 程よい大きさ */
+            line-height: 1.1; 
             margin: 10px 0; 
             filter: drop-shadow(0 4px 6px rgba(108, 92, 231, 0.3)); 
         }
-        body.obs-mode .session-badge { font-size: 1.2rem; padding: 10px 20px; }
-        
-        /* タイマー周り */
-        body.obs-mode .timer-display-area { display: flex; flex-direction: column; width: 100%; gap: 15px; margin-top: 10px; }
-        body.obs-mode .timer-box { display: none; padding: 15px; border-width: 4px; }
+        body.obs-mode .session-badge { font-size: 1rem; padding: 8px 20px; margin-bottom: 5px; }
+        body.obs-mode .timer-display-area { 
+            width: 100%; margin-top: auto; 
+            display: flex; flex-direction: column; gap: 10px; 
+        }
+        body.obs-mode .timer-box { 
+            display: none; padding: 10px; border-width: 4px; 
+        } 
         body.obs-mode .timer-box.active { display: block; }
-        body.obs-mode .timer-time { font-size: 3rem; margin: 5px 0; } /* 4rem -> 3remへ縮小 */
+        body.obs-mode .timer-time { font-size: 2.5rem; margin: 0; }
+        body.obs-mode .timer-msg { font-size: 0.8rem; min-height: 1.5em; }
 
-        /* 右側ステータス */
-        body.obs-mode .stats-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; margin: 0; height: 100%; }
-        body.obs-mode .stat-box { padding: 10px; justify-content: center; }
-        body.obs-mode .stat-num { font-size: 2.5rem; } /* 4vw -> 2.5remへ縮小 */
-        body.obs-mode .stat-label { font-size: 1rem; }
-        body.obs-mode .btn-manual, body.obs-mode .btn-adj { display: none; }
-        
+        /* --- 右側エリア: ステータス & 操作盤 --- */
+        body.obs-mode .obs-right-col {
+            display: grid;
+            grid-template-rows: 2fr 1fr; /* 上:ステータス 下:操作 */
+            gap: 15px;
+            height: 100%;
+        }
+
+        /* ステータス4つ (グリッド) */
+        body.obs-mode .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 10px;
+            margin: 0;
+            height: 100%;
+        }
+        body.obs-mode .stat-box { padding: 10px; justify-content: center; height: 100%; box-sizing: border-box; }
+        body.obs-mode .stat-num { font-size: 2.2rem; margin-bottom: 0; }
+        body.obs-mode .stat-label { font-size: 0.9rem; margin-top: 5px; }
+        body.obs-mode .stat-sub { font-size: 0.8rem; }
+        /* OBSでは細かい手動調整ボタン(+/-)は隠す（ごちゃつくため） */
+        body.obs-mode .btn-adj, body.obs-mode .btn-manual, body.obs-mode #subManualControls { display: none !important; }
+
+        /* 操作エリア (Start/Stop & 音量) */
+        body.obs-mode .control-area { 
+            display: flex !important; /* 表示する */
+            align-items: center; 
+            justify-content: center; 
+            margin: 0; padding: 0;
+        }
+        body.obs-mode .btn-start, body.obs-mode .btn-stop {
+            padding: 15px 30px; 
+            font-size: 1.2rem; /* 少し控えめに */
+            width: 90%;
+        }
+
+        body.obs-mode .sound-setting {
+            display: flex !important; /* 表示する */
+            border-top: none; margin: 0; padding: 0;
+            justify-content: space-around;
+            background: #f1f2f6; border-radius: 12px; padding: 10px;
+        }
+        body.obs-mode .volume-control input { width: 120px; } /* スライダー短く */
+        body.obs-mode .voice-box { display: none; } /* 声質変更は場所とるので隠す(音量は残す) */
+        body.obs-mode .btn-test { font-size: 0.8rem; padding: 4px 10px; }
+
         .status-bar { padding: 16px; background: #fff; border-radius: 16px; text-align: center; font-weight: bold; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .status-ok { color: #00b894; border: 2px solid #00b894; background: #edfbf7; }
         .status-warn { color: #d63031; border: 2px solid #d63031; background: #fdeaea; }
@@ -346,63 +399,65 @@
             </div>
         </div>
 
-        <div class="stats-grid">
-            <div class="stat-box">
-                <span class="stat-num" id="dispSubsVal">0</span>
-                <span class="stat-sub" id="dispSubsInc">(+0)</span>
-                <div id="subManualControls" class="sub-manual-controls" style="margin-top:10px; display:none;">
-                    <button class="btn-adj btn-minus" onclick="adjustSub(-1)" type="button">-</button>
-                    <button class="btn-adj btn-plus" onclick="adjustSub(1)" type="button">+</button>
+        <div class="obs-right-col">
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <span class="stat-num" id="dispSubsVal">0</span>
+                    <span class="stat-sub" id="dispSubsInc">(+0)</span>
+                    <div id="subManualControls" class="sub-manual-controls" style="margin-top:10px; display:none;">
+                        <button class="btn-adj btn-minus" onclick="adjustSub(-1)" type="button">-</button>
+                        <button class="btn-adj btn-plus" onclick="adjustSub(1)" type="button">+</button>
+                    </div>
+                    <span class="stat-label">👤 登録者数</span>
                 </div>
-                <span class="stat-label">👤 登録者数</span>
-            </div>
-            <div class="stat-box">
-                <span class="stat-num" id="dispFirst">0</span>
-                <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
-                    <button class="btn-adj btn-minus" onclick="adjustFirst(-1)" type="button">-1</button>
-                    <button class="btn-manual" onclick="manualHatsuAction()" type="button">+1 / Reset</button>
+                <div class="stat-box">
+                    <span class="stat-num" id="dispFirst">0</span>
+                    <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+                        <button class="btn-adj btn-minus" onclick="adjustFirst(-1)" type="button">-1</button>
+                        <button class="btn-manual" onclick="manualHatsuAction()" type="button">+1 / Reset</button>
+                    </div>
+                    <span class="stat-label">🎉 初コメ (回数)</span>
+                    <div style="font-size:0.8rem; color:#aaa; margin-top:5px;">(タイマー押下も可)</div>
                 </div>
-                <span class="stat-label">🎉 初コメ (回数)</span>
-                <div style="font-size:0.8rem; color:#aaa; margin-top:5px;">(タイマー押下も可)</div>
-            </div>
-            <div class="stat-box">
-                <span class="stat-num" id="dispComm">0</span>
-                <span class="stat-label">💬 総コメント</span>
-                <div style="font-size:0.75rem; color:#b2bec3; margin-top:4px;">(更新: <span id="lastCommTime">--:--:--</span>)</div>
-            </div>
-            <div class="stat-box">
-                <span class="stat-num" id="dispViewers">-</span>
-                <span class="stat-label">👀 現在同接</span>
-            </div>
-        </div>
-        
-        <div style="margin-top:24px; text-align:center; font-size:1.1rem; font-weight:bold; color:var(--text-sub);">
-            <span id="conditionStatusText">準備中</span>
-        </div>
-        
-        <div class="control-area" style="position:relative; z-index:20;">
-            <button id="btnStart" class="btn-start" onclick="startTracking()" type="button">🚀 計測スタート！</button>
-            <button id="btnStop" class="btn-stop" onclick="stopTrackingManual()" type="button">⛔ 計測ストップ (集計して終了)</button>
-        </div>
-
-        <div class="sound-setting">
-            <div style="display:flex; flex-direction:column; gap:5px; align-items:center;">
-                <label style="cursor:pointer; font-size:0.9rem;"><input type="checkbox" id="soundEnabled" checked> 🔊 音声ON</label>
-                <div class="volume-control">
-                    <input type="range" id="volumeSlider" min="0" max="1.5" step="0.05" value="0.5">
-                    <span id="volValue" style="font-size:0.85rem; font-weight:bold; color:var(--accent-color);">50%</span>
+                <div class="stat-box">
+                    <span class="stat-num" id="dispComm">0</span>
+                    <span class="stat-label">💬 総コメント</span>
+                    <div style="font-size:0.75rem; color:#b2bec3; margin-top:4px;">(更新: <span id="lastCommTime">--:--:--</span>)</div>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-num" id="dispViewers">-</span>
+                    <span class="stat-label">👀 現在同接</span>
                 </div>
             </div>
             
-            <div class="voice-box">
-                <select id="voiceSourceSelector" class="voice-select" onchange="playVolumeTest()"><option value="">(ベース音声を選択)</option></select>
-                <select id="voiceTypeSelector" class="voice-select" onchange="playVolumeTest()">
-                    <option value="robot">🤖 機械ボイス (標準)</option>
-                    <option value="kawaii">👧 かわいらしい (高め)</option>
-                    <option value="ikemen">✨ イケメン (低め)</option>
-                </select>
+            <div style="margin-top:5px; text-align:center; font-size:1.1rem; font-weight:bold; color:var(--text-sub);">
+                <span id="conditionStatusText">準備中</span>
             </div>
-            <button class="btn-test" onclick="playVolumeTest()" type="button">🔊 テスト</button>
+            
+            <div class="control-area" style="position:relative; z-index:20; margin-top:10px;">
+                <button id="btnStart" class="btn-start" onclick="startTracking()" type="button">🚀 計測スタート！</button>
+                <button id="btnStop" class="btn-stop" onclick="stopTrackingManual()" type="button">⛔ 計測ストップ (集計して終了)</button>
+            </div>
+
+            <div class="sound-setting">
+                <div style="display:flex; flex-direction:column; gap:5px; align-items:center;">
+                    <label style="cursor:pointer; font-size:0.9rem;"><input type="checkbox" id="soundEnabled" checked> 🔊 音声ON</label>
+                    <div class="volume-control">
+                        <input type="range" id="volumeSlider" min="0" max="1.5" step="0.05" value="0.5">
+                        <span id="volValue" style="font-size:0.85rem; font-weight:bold; color:var(--accent-color);">50%</span>
+                    </div>
+                </div>
+                
+                <div class="voice-box">
+                    <select id="voiceSourceSelector" class="voice-select" onchange="playVolumeTest()"><option value="">(ベース音声を選択)</option></select>
+                    <select id="voiceTypeSelector" class="voice-select" onchange="playVolumeTest()">
+                        <option value="robot">🤖 機械ボイス (標準)</option>
+                        <option value="kawaii">👧 かわいらしい (高め)</option>
+                        <option value="ikemen">✨ イケメン (低め)</option>
+                    </select>
+                </div>
+                <button class="btn-test" onclick="playVolumeTest()" type="button">🔊 テスト</button>
+            </div>
         </div>
     </div>
 
@@ -428,8 +483,8 @@
     const HISTORY_KEY = "yt_endurance_v55_final_voiceselect";
     const QUOTA_KEY = "yt_api_quota_pt_v1";
     
-    // データ保存キー：個人別詳細データ & 全体統計
-    const DATABASE_KEY = "yt_personal_database_id_v2"; // キー名を変更(ID版)
+    // データ保存キー：個人別詳細データ & 全体統計 (ID学習版)
+    const DATABASE_KEY = "yt_personal_database_id_v2"; 
     const GLOBAL_STATS_KEY = "yt_global_stats_id_v2";
 
     const API_KEY_LIMIT_MS = 3000; 
@@ -456,7 +511,7 @@
     let youtubeSuggestedInterval = 5000;
     let lastFetchTime = 0;
     
-    // DB構造: { channelId: { name: "Aさん", genres: { "20": [0,0,500...24個] } } }
+    // ID学習用データベース
     let personalDatabase = {}; 
     let globalStats = {};      
     
@@ -489,7 +544,7 @@
         updateSessionInfo();
         displayApiQuota(); 
         updateVisibility(); 
-        loadDatabase(); 
+        loadDatabase(); // DB読み込み
         updateForecast(); 
         populateVoiceList();
         
@@ -506,6 +561,7 @@
         requestAnimationFrame(updateVisualsLoop); 
     };
     
+    // ID学習DBの読み書き
     function loadDatabase() {
         try {
             personalDatabase = JSON.parse(localStorage.getItem(DATABASE_KEY) || "{}");
@@ -522,7 +578,6 @@
     // 更新ロジック (IDベース)
     function updateChannelStats(cid, cname, catId, currentCPM) {
         if (!personalDatabase[cid]) personalDatabase[cid] = { name: cname, genres: {} };
-        // catId ("20"など) をキーにする
         if (!personalDatabase[cid].genres[catId]) personalDatabase[cid].genres[catId] = new Array(24).fill(0);
         
         const h = new Date().getHours();
@@ -530,37 +585,30 @@
             personalDatabase[cid].genres[catId][h] = Math.round(currentCPM);
         }
         
-        // 全体統計もIDベース
         if (!globalStats[catId]) globalStats[catId] = { totalCPM: 0, count: 0 };
         saveDatabase();
     }
     
     // 予測ロジック (IDベース)
     function predictCPM(cid, catId, subs) {
-        // 1. 個人のID別履歴
         if (personalDatabase[cid] && personalDatabase[cid].genres[catId]) {
             const h = new Date().getHours();
             let val = personalDatabase[cid].genres[catId][h];
             if (val > 0) return { val: val, source: "個人履歴" };
-            
             const valid = personalDatabase[cid].genres[catId].filter(v => v > 0);
             if (valid.length > 0) {
                 const avg = valid.reduce((a,b)=>a+b,0) / valid.length;
                 return { val: avg, source: "個人平均" };
             }
         }
-        
-        // 2. 全体統計 (ID別)
         let baseRatio = 0.0005; 
-        if (catId === "20") baseRatio = 0.0015; // Gaming
-        if (catId === "10") baseRatio = 0.0008; // Music
+        if (catId === "20") baseRatio = 0.0015; 
+        if (catId === "10") baseRatio = 0.0008; 
         
         if (globalStats[catId] && globalStats[catId].count > 0) {
             const avgGenreCPM = globalStats[catId].totalCPM / globalStats[catId].count;
             return { val: avgGenreCPM, source: "カテゴリ平均" };
         }
-
-        // 3. 新規推測
         return { val: subs * baseRatio, source: "新規推測" };
     }
 
@@ -619,12 +667,9 @@
         const display = document.getElementById('chatIntervalDisplay');
         const box = document.getElementById('aiForecastBox');
         
-        // プレビューのみ
         const urlVal = document.getElementById('url').value;
         const tempVid = extractVideoId(urlVal);
-        if (tempVid && apiKeys.length > 0) {
-             // ここではまだAPI叩かない（ボタンで確定させる）
-        }
+        if (tempVid && apiKeys.length > 0) { }
 
         const h = parseFloat(document.getElementById('targetHours').value);
         if(!h || h <= 0) { display.innerText = "--"; return; }
@@ -721,8 +766,7 @@
         channelId = v.snippet.channelId;
         currentChannelName = v.snippet.channelTitle;
         
-        // ID取得
-        currentCategoryId = v.snippet.categoryId; // これを使う
+        currentCategoryId = v.snippet.categoryId; 
         const catName = getGenreName(currentCategoryId);
         document.getElementById('detectedGenre').innerText = `📺 ${catName} (ID:${currentCategoryId})`;
 
@@ -740,7 +784,6 @@
 
         refreshApiKeys();
         
-        // 予測 (IDを渡す)
         const prediction = predictCPM(channelId, currentCategoryId, initialSub);
         const predictedCPM = prediction.val;
         const predSource = prediction.source;
@@ -788,7 +831,6 @@
                 const realCPM = realRatePerMs * 60000;
                 
                 if(!isDemo && itemCount > 0 && realCPM < 20000) {
-                    // IDベースで更新
                     updateChannelStats(channelId, currentChannelName, currentCategoryId, realCPM);
                 }
 
