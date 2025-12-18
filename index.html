@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jewel Ocean: ID-Learning & Full-OBS</title>
+    <title>Jewel Ocean: Perfect OBS Layout</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
     <style>
-        /* --- デザイン定義 (基本はそのまま) --- */
+        /* --- ベースデザイン (共通) --- */
         :root {
             --bg-grad-1: #a18cd1; --bg-grad-2: #fbc2eb;
             --glass-bg: rgba(255, 255, 255, 0.95); --glass-border: rgba(255, 255, 255, 0.6);
@@ -104,110 +104,121 @@
 
         .obs-toggle { text-align: right; margin-bottom: 10px; }
         
-        /* --- OBSモード (改善版: 全部入り・横並び・はみ出し防止) --- */
+        /* --- 修正版 OBSモード (完全フィット＆レイアウト整理) --- */
         body.obs-mode { 
             background: transparent; 
             padding: 0; margin: 0;
-            overflow: hidden; /* はみ出し防止 */
+            overflow: hidden; /* スクロール絶対出さない */
             height: 100vh; width: 100vw;
             box-sizing: border-box;
         }
         
-        /* OBSモードで不要なものを隠す */
         body.obs-mode .bubbles, body.obs-mode .setting-wrap, body.obs-mode .history-wrap, body.obs-mode .status-bar, body.obs-mode .video-card { display: none !important; }
-        
-        /* OBS切替ボタンは薄く表示 */
         body.obs-mode .obs-toggle { position: fixed; top: 10px; right: 10px; opacity: 0.1; transition: opacity 0.3s; z-index: 99999; }
         body.obs-mode .obs-toggle:hover { opacity: 1; }
+        body.obs-mode .container { max-width: 100%; margin: 0; height: 100%; padding: 15px; box-sizing: border-box; }
         
-        body.obs-mode .container { max-width: 100%; margin: 0; height: 100%; padding: 20px; box-sizing: border-box; }
-        
-        /* OBS用グリッドレイアウト */
+        /* メイングリッド: 左35% 右65% */
         body.obs-mode .glass-card.score-card { 
             margin: 0; 
             border: 6px solid var(--accent-color); 
             background: rgba(255,255,255,0.95); 
-            height: 100%; /* 全画面 */
-            width: 100%;
+            height: 100%;
             box-sizing: border-box;
             display: grid;
-            grid-template-columns: 1fr 1.3fr; /* 左:スコア 右:ステータス&操作 */
-            grid-template-rows: 1fr;
-            gap: 20px;
+            grid-template-columns: 35% 65%;
+            gap: 15px;
+            padding: 15px;
             align-content: stretch;
-            padding: 20px;
         }
 
-        /* --- 左側エリア: スコア & タイマー --- */
+        /* 左側: スコア & タイマー (中央揃え) */
         body.obs-mode .score-wrapper {
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             height: 100%;
+            border-right: 2px dashed #eee; padding-right: 15px;
         }
-        body.obs-mode .score-title { font-size: 1.2rem; margin-bottom: 0; }
+        body.obs-mode .score-title { font-size: 3vh; margin: 0; color: var(--accent-color); }
+        /* 文字サイズをvh指定で画面高さに追従させる */
         body.obs-mode .score-value { 
-            font-size: 6rem; /* 程よい大きさ */
-            line-height: 1.1; 
-            margin: 10px 0; 
+            font-size: 18vh; 
+            line-height: 1; margin: 2vh 0; 
             filter: drop-shadow(0 4px 6px rgba(108, 92, 231, 0.3)); 
         }
-        body.obs-mode .session-badge { font-size: 1rem; padding: 8px 20px; margin-bottom: 5px; }
-        body.obs-mode .timer-display-area { 
-            width: 100%; margin-top: auto; 
-            display: flex; flex-direction: column; gap: 10px; 
-        }
-        body.obs-mode .timer-box { 
-            display: none; padding: 10px; border-width: 4px; 
-        } 
+        body.obs-mode .session-badge { font-size: 2.5vh; padding: 0.5vh 2vh; margin-bottom: 1vh; white-space: nowrap; }
+        body.obs-mode .timer-display-area { width: 100%; margin-top: auto; display: flex; flex-direction: column; gap: 1vh; }
+        body.obs-mode .timer-box { display: none; padding: 1vh; border-width: 4px; } 
         body.obs-mode .timer-box.active { display: block; }
-        body.obs-mode .timer-time { font-size: 2.5rem; margin: 0; }
-        body.obs-mode .timer-msg { font-size: 0.8rem; min-height: 1.5em; }
+        body.obs-mode .timer-label { font-size: 2vh; }
+        body.obs-mode .timer-time { font-size: 6vh; margin: 0; line-height: 1; }
+        body.obs-mode .timer-msg { font-size: 2vh; min-height: 1.2em; }
 
-        /* --- 右側エリア: ステータス & 操作盤 --- */
+        /* 右側: ステータス & 操作盤 */
         body.obs-mode .obs-right-col {
             display: grid;
-            grid-template-rows: 2fr 1fr; /* 上:ステータス 下:操作 */
+            grid-template-rows: 1fr auto; /* 上:ステータス(残り全て) 下:操作盤(自動) */
             gap: 15px;
             height: 100%;
         }
 
-        /* ステータス4つ (グリッド) */
+        /* 4つのステータス (2x2グリッド) */
         body.obs-mode .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             grid-template-rows: 1fr 1fr;
             gap: 10px;
             margin: 0;
-            height: 100%;
+            height: 100%; /* 親の残り高さいっぱい */
         }
-        body.obs-mode .stat-box { padding: 10px; justify-content: center; height: 100%; box-sizing: border-box; }
-        body.obs-mode .stat-num { font-size: 2.2rem; margin-bottom: 0; }
-        body.obs-mode .stat-label { font-size: 0.9rem; margin-top: 5px; }
-        body.obs-mode .stat-sub { font-size: 0.8rem; }
-        /* OBSでは細かい手動調整ボタン(+/-)は隠す（ごちゃつくため） */
-        body.obs-mode .btn-adj, body.obs-mode .btn-manual, body.obs-mode #subManualControls { display: none !important; }
-
-        /* 操作エリア (Start/Stop & 音量) */
-        body.obs-mode .control-area { 
-            display: flex !important; /* 表示する */
-            align-items: center; 
+        body.obs-mode .stat-box { 
+            padding: 5px; 
             justify-content: center; 
-            margin: 0; padding: 0;
+            height: 100%; 
+            box-sizing: border-box;
+            border: 3px solid #f1f2f6; /* 枠線を少し太く */
+        }
+        body.obs-mode .stat-num { font-size: 7vh; margin: 0; line-height: 1.1; }
+        body.obs-mode .stat-label { font-size: 2.5vh; margin-top: 0.5vh; }
+        body.obs-mode .stat-sub { font-size: 2vh; }
+        /* OBSでは不要なボタンを消す */
+        body.obs-mode .btn-adj, body.obs-mode .btn-manual, body.obs-mode #subManualControls, body.obs-mode .btn-test { display: none !important; }
+
+        /* 右下: 操作パネル (横並びで整理) */
+        body.obs-mode .control-panel-obs {
+            display: grid;
+            grid-template-columns: 2fr 1fr; /* ボタン2 : 音量1 の比率 */
+            gap: 15px;
+            align-items: center;
+            background: #f8f9fa;
+            border: 2px solid #dfe6e9;
+            padding: 10px;
+            border-radius: 16px;
+        }
+
+        /* スタート/ストップボタン */
+        body.obs-mode .control-area { 
+            display: flex !important; margin: 0; padding: 0; width: 100%;
         }
         body.obs-mode .btn-start, body.obs-mode .btn-stop {
-            padding: 15px 30px; 
-            font-size: 1.2rem; /* 少し控えめに */
-            width: 90%;
+            width: 100%; 
+            padding: 1.5vh 0; 
+            font-size: 3vh; 
+            border-radius: 12px;
+            margin: 0;
         }
 
+        /* 音量エリア */
         body.obs-mode .sound-setting {
-            display: flex !important; /* 表示する */
-            border-top: none; margin: 0; padding: 0;
-            justify-content: space-around;
-            background: #f1f2f6; border-radius: 12px; padding: 10px;
+            display: flex !important; flex-direction: column; 
+            border: none; margin: 0; padding: 0; background: transparent;
+            justify-content: center;
         }
-        body.obs-mode .volume-control input { width: 120px; } /* スライダー短く */
-        body.obs-mode .voice-box { display: none; } /* 声質変更は場所とるので隠す(音量は残す) */
-        body.obs-mode .btn-test { font-size: 0.8rem; padding: 4px 10px; }
+        body.obs-mode .volume-control { justify-content: center; gap: 5px; }
+        body.obs-mode .volume-control input { width: 100%; height: 2vh; }
+        body.obs-mode #volValue { font-size: 2.5vh; }
+        body.obs-mode .voice-box { display: none; } /* 声質は場所とるので隠す */
+        body.obs-mode label { font-size: 2vh; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        body.obs-mode input[type=checkbox] { width: 2vh; height: 2vh; }
 
         .status-bar { padding: 16px; background: #fff; border-radius: 16px; text-align: center; font-weight: bold; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .status-ok { color: #00b894; border: 2px solid #00b894; background: #edfbf7; }
@@ -434,29 +445,28 @@
                 <span id="conditionStatusText">準備中</span>
             </div>
             
-            <div class="control-area" style="position:relative; z-index:20; margin-top:10px;">
-                <button id="btnStart" class="btn-start" onclick="startTracking()" type="button">🚀 計測スタート！</button>
-                <button id="btnStop" class="btn-stop" onclick="stopTrackingManual()" type="button">⛔ 計測ストップ (集計して終了)</button>
-            </div>
+            <div class="control-panel-obs">
+                <div class="control-area" style="position:relative; z-index:20;">
+                    <button id="btnStart" class="btn-start" onclick="startTracking()" type="button">🚀 計測スタート！</button>
+                    <button id="btnStop" class="btn-stop" onclick="stopTrackingManual()" type="button">⛔ 計測ストップ</button>
+                </div>
 
-            <div class="sound-setting">
-                <div style="display:flex; flex-direction:column; gap:5px; align-items:center;">
-                    <label style="cursor:pointer; font-size:0.9rem;"><input type="checkbox" id="soundEnabled" checked> 🔊 音声ON</label>
+                <div class="sound-setting">
+                    <label style="cursor:pointer;"><input type="checkbox" id="soundEnabled" checked> 🔊 音声ON</label>
                     <div class="volume-control">
                         <input type="range" id="volumeSlider" min="0" max="1.5" step="0.05" value="0.5">
-                        <span id="volValue" style="font-size:0.85rem; font-weight:bold; color:var(--accent-color);">50%</span>
+                        <span id="volValue" style="font-weight:bold; color:var(--accent-color);">50%</span>
                     </div>
+                    <div class="voice-box">
+                        <select id="voiceSourceSelector" class="voice-select" onchange="playVolumeTest()"><option value="">(ベース音声)</option></select>
+                        <select id="voiceTypeSelector" class="voice-select" onchange="playVolumeTest()">
+                            <option value="robot">🤖 機械</option>
+                            <option value="kawaii">👧 可愛</option>
+                            <option value="ikemen">✨ 池面</option>
+                        </select>
+                    </div>
+                    <button class="btn-test" onclick="playVolumeTest()" type="button">🔊</button>
                 </div>
-                
-                <div class="voice-box">
-                    <select id="voiceSourceSelector" class="voice-select" onchange="playVolumeTest()"><option value="">(ベース音声を選択)</option></select>
-                    <select id="voiceTypeSelector" class="voice-select" onchange="playVolumeTest()">
-                        <option value="robot">🤖 機械ボイス (標準)</option>
-                        <option value="kawaii">👧 かわいらしい (高め)</option>
-                        <option value="ikemen">✨ イケメン (低め)</option>
-                    </select>
-                </div>
-                <button class="btn-test" onclick="playVolumeTest()" type="button">🔊 テスト</button>
             </div>
         </div>
     </div>
@@ -482,8 +492,6 @@
     const API_KEY_ELEMENT_ID = "apiKey";
     const HISTORY_KEY = "yt_endurance_v55_final_voiceselect";
     const QUOTA_KEY = "yt_api_quota_pt_v1";
-    
-    // データ保存キー：個人別詳細データ & 全体統計 (ID学習版)
     const DATABASE_KEY = "yt_personal_database_id_v2"; 
     const GLOBAL_STATS_KEY = "yt_global_stats_id_v2";
 
@@ -493,42 +501,33 @@
     const MAX_POLLING_ACTIVE = 70000; 
     const MAX_POLLING_IDLE = 70000;
 
-    // カテゴリIDの簡易マッピング（表示用）
-    const videoCategories = {
-        '1': 'Film & Animation', '2': 'Autos & Vehicles', '10': 'Music', '15': 'Pets & Animals',
-        '17': 'Sports', '20': 'Gaming', '22': 'People & Blogs', '23': 'Comedy',
-        '24': 'Entertainment', '25': 'News & Politics', '26': 'Howto & Style',
-        '27': 'Education', '28': 'Science & Technology'
-    };
+    const videoCategories = { '1': 'Film & Animation', '2': 'Autos & Vehicles', '10': 'Music', '15': 'Pets & Animals', '17': 'Sports', '20': 'Gaming', '22': 'People & Blogs', '23': 'Comedy', '24': 'Entertainment', '25': 'News & Politics', '26': 'Howto & Style', '27': 'Education', '28': 'Science & Technology' };
     function getGenreName(id) { return videoCategories[id] || `Others(${id})`; }
 
     let isTracking = false;
     let isFinishing = false;
     let isFirstRun = true; 
-
     let currentPollingInterval = 5000; 
     let calculatedZInterval = 10000;
     let youtubeSuggestedInterval = 5000;
     let lastFetchTime = 0;
     
-    // ID学習用データベース
     let personalDatabase = {}; 
     let globalStats = {};      
-    
     let sessionData = { startTime: null, startSubCount: 0, currentSubCount: 0, totalComments: 0, manualFirstComments: 0, currentViewers: 0 };
     
     let lastManualFirstActionTime = 0; 
     let dousetsuDropStartTime = null; 
     let lastDousetsuCheckSec = null; 
     let checkInterval = null; 
-    let lastHatsuAlertMin = -1;
+    let lastHatsuAlertMin = -1; 
     let lastDousetsuAlertMin = -1;
     let hasWarned30SecHatsu = false;
     let hasWarned30SecDousetsu = false;
     let lastCommentReceivedTime = 0;
 
     let videoId = "", channelId = "", liveChatId = null, nextPageToken = null;
-    let currentCategoryId = "0"; // ID管理
+    let currentCategoryId = "0"; 
     let currentChannelName = "";
     
     let isDemo = false, isManualSub = true;
@@ -539,97 +538,50 @@
     let visualState = { totalPoints: 0, subCount: 0, firstCount: 0, totalComments: 0, viewers: 0 };
 
     window.onload = function() { 
-        renderHistory(); 
-        checkDstAndDisplayResetTime(); 
-        updateSessionInfo();
-        displayApiQuota(); 
-        updateVisibility(); 
-        loadDatabase(); // DB読み込み
-        updateForecast(); 
-        populateVoiceList();
-        
+        renderHistory(); checkDstAndDisplayResetTime(); updateSessionInfo(); displayApiQuota(); updateVisibility(); loadDatabase(); updateForecast(); populateVoiceList();
         const slider = document.getElementById('volumeSlider');
         const display = document.getElementById('volValue');
         globalVolume = parseFloat(slider.value);
         display.innerText = Math.round(globalVolume * 100) + "%";
-        
-        slider.addEventListener('input', function(e) {
-            globalVolume = parseFloat(e.target.value);
-            display.innerText = Math.round(globalVolume * 100) + "%";
-        });
-
+        slider.addEventListener('input', function(e) { globalVolume = parseFloat(e.target.value); display.innerText = Math.round(globalVolume * 100) + "%"; });
         requestAnimationFrame(updateVisualsLoop); 
     };
     
-    // ID学習DBの読み書き
-    function loadDatabase() {
-        try {
-            personalDatabase = JSON.parse(localStorage.getItem(DATABASE_KEY) || "{}");
-            globalStats = JSON.parse(localStorage.getItem(GLOBAL_STATS_KEY) || "{}");
-        } catch(e) { console.error("DB Load Error", e); personalDatabase={}; globalStats={}; }
-    }
-    function saveDatabase() {
-        try {
-            localStorage.setItem(DATABASE_KEY, JSON.stringify(personalDatabase));
-            localStorage.setItem(GLOBAL_STATS_KEY, JSON.stringify(globalStats));
-        } catch(e) { console.error("DB Save Error", e); }
-    }
+    function loadDatabase() { try { personalDatabase = JSON.parse(localStorage.getItem(DATABASE_KEY) || "{}"); globalStats = JSON.parse(localStorage.getItem(GLOBAL_STATS_KEY) || "{}"); } catch(e) { console.error("DB Load Error", e); personalDatabase={}; globalStats={}; } }
+    function saveDatabase() { try { localStorage.setItem(DATABASE_KEY, JSON.stringify(personalDatabase)); localStorage.setItem(GLOBAL_STATS_KEY, JSON.stringify(globalStats)); } catch(e) { console.error("DB Save Error", e); } }
     
-    // 更新ロジック (IDベース)
     function updateChannelStats(cid, cname, catId, currentCPM) {
         if (!personalDatabase[cid]) personalDatabase[cid] = { name: cname, genres: {} };
         if (!personalDatabase[cid].genres[catId]) personalDatabase[cid].genres[catId] = new Array(24).fill(0);
-        
         const h = new Date().getHours();
-        if (currentCPM > personalDatabase[cid].genres[catId][h]) {
-            personalDatabase[cid].genres[catId][h] = Math.round(currentCPM);
-        }
-        
+        if (currentCPM > personalDatabase[cid].genres[catId][h]) personalDatabase[cid].genres[catId][h] = Math.round(currentCPM);
         if (!globalStats[catId]) globalStats[catId] = { totalCPM: 0, count: 0 };
         saveDatabase();
     }
     
-    // 予測ロジック (IDベース)
     function predictCPM(cid, catId, subs) {
         if (personalDatabase[cid] && personalDatabase[cid].genres[catId]) {
             const h = new Date().getHours();
             let val = personalDatabase[cid].genres[catId][h];
             if (val > 0) return { val: val, source: "個人履歴" };
             const valid = personalDatabase[cid].genres[catId].filter(v => v > 0);
-            if (valid.length > 0) {
-                const avg = valid.reduce((a,b)=>a+b,0) / valid.length;
-                return { val: avg, source: "個人平均" };
-            }
+            if (valid.length > 0) { const avg = valid.reduce((a,b)=>a+b,0) / valid.length; return { val: avg, source: "個人平均" }; }
         }
         let baseRatio = 0.0005; 
         if (catId === "20") baseRatio = 0.0015; 
         if (catId === "10") baseRatio = 0.0008; 
-        
-        if (globalStats[catId] && globalStats[catId].count > 0) {
-            const avgGenreCPM = globalStats[catId].totalCPM / globalStats[catId].count;
-            return { val: avgGenreCPM, source: "カテゴリ平均" };
-        }
+        if (globalStats[catId] && globalStats[catId].count > 0) { const avgGenreCPM = globalStats[catId].totalCPM / globalStats[catId].count; return { val: avgGenreCPM, source: "カテゴリ平均" }; }
         return { val: subs * baseRatio, source: "新規推測" };
     }
 
-    // --- 音声 & UI ---
     function populateVoiceList() {
         if(typeof speechSynthesis === 'undefined') return;
         const voices = speechSynthesis.getVoices();
         const sel = document.getElementById('voiceSourceSelector');
         sel.innerHTML = '<option value="">(端末の標準音声)</option>';
-        voices.forEach((v, i) => {
-            if(v.lang.includes('ja') || v.lang.includes('JP')) {
-                const opt = document.createElement('option');
-                opt.value = i;
-                opt.textContent = `${v.name} (${v.lang})`;
-                sel.appendChild(opt);
-            }
-        });
+        voices.forEach((v, i) => { if(v.lang.includes('ja') || v.lang.includes('JP')) { const opt = document.createElement('option'); opt.value = i; opt.textContent = `${v.name} (${v.lang})`; sel.appendChild(opt); } });
     }
-    if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
-        speechSynthesis.onvoiceschanged = populateVoiceList;
-    }
+    if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) { speechSynthesis.onvoiceschanged = populateVoiceList; }
 
     document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") saveDatabase(); });
     document.getElementById('cond_no_first').addEventListener('change', updateVisibility);
@@ -642,38 +594,18 @@
         document.getElementById('timer-dousetsu').classList.toggle('active', useDousetsu);
     }
 
-    function getApiKeys() {
-        const el = document.getElementById(API_KEY_ELEMENT_ID);
-        if(!el) return [];
-        const raw = el.value;
-        if (!raw) return [];
-        let keys = raw.split(/[\n,\s]+/).filter(k => k.trim().length > 0);
-        return [...new Set(keys)];
-    }
+    function getApiKeys() { const el = document.getElementById(API_KEY_ELEMENT_ID); if(!el) return []; const raw = el.value; if (!raw) return []; return [...new Set(raw.split(/[\n,\s]+/).filter(k => k.trim().length > 0))]; }
     function refreshApiKeys() { apiKeys = getApiKeys(); if(currentKeyIndex >= apiKeys.length) currentKeyIndex = 0; }
     function getNextApiKey() { if (apiKeys.length === 0) return ""; const key = apiKeys[currentKeyIndex]; currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length; return key; }
-
     function getDailyLimitPerKey(z) { if (z <= 6) return 9800; if (z <= 19) return 9000; return 8500; }
-    function calculateMaxDailyHours(targetHours) {
-        const now = new Date(); const resetHour = checkDstAndDisplayResetTime(); let resetTime = new Date(now); resetTime.setHours(resetHour, 0, 0, 0); if (now >= resetTime) resetTime.setDate(resetTime.getDate() + 1);
-        const hoursUntilReset = (resetTime - now) / (1000 * 60 * 60);
-        if (targetHours <= hoursUntilReset) return targetHours;
-        const remaining = targetHours - hoursUntilReset;
-        if (remaining >= 24) return 24; return Math.max(hoursUntilReset, remaining);
-    }
+    function calculateMaxDailyHours(targetHours) { const now = new Date(); const resetHour = checkDstAndDisplayResetTime(); let resetTime = new Date(now); resetTime.setHours(resetHour, 0, 0, 0); if (now >= resetTime) resetTime.setDate(resetTime.getDate() + 1); const hoursUntilReset = (resetTime - now) / (1000 * 60 * 60); if (targetHours <= hoursUntilReset) return targetHours; const remaining = targetHours - hoursUntilReset; if (remaining >= 24) return 24; return Math.max(hoursUntilReset, remaining); }
 
     async function updateForecast() {
         refreshApiKeys();
         const display = document.getElementById('chatIntervalDisplay');
         const box = document.getElementById('aiForecastBox');
-        
-        const urlVal = document.getElementById('url').value;
-        const tempVid = extractVideoId(urlVal);
-        if (tempVid && apiKeys.length > 0) { }
-
         const h = parseFloat(document.getElementById('targetHours').value);
         if(!h || h <= 0) { display.innerText = "--"; return; }
-
         const calcKeyCount = Math.max(1, apiKeys.length);
         const minPhysicalMs = API_KEY_LIMIT_MS / calcKeyCount; 
         const z = calculateMaxDailyHours(h);
@@ -683,120 +615,63 @@
         const safeIntervalSec = (3600 * 5) / pointsPerHour;
         calculatedZInterval = safeIntervalSec * 1000;
         if (calculatedZInterval < minPhysicalMs) calculatedZInterval = minPhysicalMs;
-
-        let msg = `🤖 <b>AI分析:</b><br>`;
-        msg += `・目標: ${h}時間 (Z=${z.toFixed(1)}h / 上限${limitPerKey}pt)<br>`;
-        msg += `・安全間隔: <b>${(calculatedZInterval/1000).toFixed(1)}秒</b><br>`;
-        
-        box.style.display = "block";
-        box.innerHTML = msg;
-
-        if(document.getElementById('autoSpeedCheck').checked) {
-            display.innerHTML = `🤖 Auto: <b>${(minPhysicalMs/1000).toFixed(2)}s</b> 〜 <b>${(calculatedZInterval/1000).toFixed(1)}s</b>`;
-            display.style.color = "#6c5ce7";
-        } else {
-            display.innerText = `🛡️ 固定: ${(calculatedZInterval/1000).toFixed(1)}秒`;
-            display.style.color = "#00b894";
-        }
+        let msg = `🤖 <b>AI分析:</b><br>・目標: ${h}時間 (Z=${z.toFixed(1)}h / 上限${limitPerKey}pt)<br>・安全間隔: <b>${(calculatedZInterval/1000).toFixed(1)}秒</b><br>`;
+        box.style.display = "block"; box.innerHTML = msg;
+        if(document.getElementById('autoSpeedCheck').checked) { display.innerHTML = `🤖 Auto: <b>${(minPhysicalMs/1000).toFixed(2)}s</b> 〜 <b>${(calculatedZInterval/1000).toFixed(1)}s</b>`; display.style.color = "#6c5ce7"; } else { display.innerText = `🛡️ 固定: ${(calculatedZInterval/1000).toFixed(1)}秒`; display.style.color = "#00b894"; }
         displayApiQuota();
     }
 
     async function startTracking() {
         if (checkInterval) clearInterval(checkInterval);
         if (isTracking) return;
-
         refreshApiKeys(); 
         if(!document.getElementById('demoModeCheck').checked && apiKeys.length === 0) return alert("APIキーを入力してください");
         if (!checkQuotaSafe()) return alert("API上限のため開始できません");
-
         initAudio();
         isDemo = document.getElementById('demoModeCheck').checked;
         isManualSub = document.getElementById('manualSubCheck').checked;
         if (!isDemo && !validateInputs()) return;
-
         document.body.classList.add('tracking');
         document.getElementById('btnStart').innerText = "接続中...";
-        isTracking = true;
-        isFirstRun = true; 
-
+        isTracking = true; isFirstRun = true; 
         try {
             await initSession(); 
             document.getElementById('btnStart').innerText = "🚀 計測スタート！";
             isFinishing = false;
             document.getElementById(API_KEY_ELEMENT_ID).classList.add('api-hidden');
             if(isManualSub) document.getElementById('subManualControls').style.display = 'block';
-            
-            lastManualFirstActionTime = Date.now();
-            dousetsuDropStartTime = null;
-            hasWarned30SecHatsu = false;
-            hasWarned30SecDousetsu = false;
-            lastHatsuAlertMin = -1;
-            lastDousetsuAlertMin = -1;
-            lastFetchTime = Date.now();
-            lastCommentReceivedTime = Date.now();
-            
-            runApiLoop();
-            checkInterval = setInterval(checkConditionsAndTimer, 200);
-
-        } catch (e) {
-            isTracking = false;
-            document.body.classList.remove('tracking');
-            document.getElementById('btnStart').innerText = "🚀 計測スタート！";
-            alert("開始エラー: " + e.message);
-        }
+            lastManualFirstActionTime = Date.now(); dousetsuDropStartTime = null; hasWarned30SecHatsu = false; hasWarned30SecDousetsu = false; lastHatsuAlertMin = -1; lastDousetsuAlertMin = -1; lastFetchTime = Date.now(); lastCommentReceivedTime = Date.now();
+            runApiLoop(); checkInterval = setInterval(checkConditionsAndTimer, 200);
+        } catch (e) { isTracking = false; document.body.classList.remove('tracking'); document.getElementById('btnStart').innerText = "🚀 計測スタート！"; alert("開始エラー: " + e.message); }
     }
 
     function stopTrackingManual() { if(isTracking) finishSession("手動STOP"); }
 
     async function initSession() {
-        if(isDemo) { 
-            sessionData = { startTime: new Date(), startSubCount: 10000, currentSubCount: 10000, totalComments: 0, manualFirstComments: 0, currentViewers: 50 }; 
-            currentCategoryId = "0";
-            document.getElementById('detectedGenre').innerText = "🧪 Demo Mode";
-            currentPollingInterval = 3000;
-            return; 
-        }
-
+        if(isDemo) { sessionData = { startTime: new Date(), startSubCount: 10000, currentSubCount: 10000, totalComments: 0, manualFirstComments: 0, currentViewers: 50 }; currentCategoryId = "0"; document.getElementById('detectedGenre').innerText = "🧪 Demo Mode"; currentPollingInterval = 3000; return; }
         videoId = extractVideoId(document.getElementById('url').value);
         const key = getNextApiKey();
         const v = await fetchVideoDetails(videoId, key);
         if (!v.liveStreamingDetails?.activeLiveChatId) throw new Error("配信中じゃないかも");
-        
         liveChatId = v.liveStreamingDetails.activeLiveChatId; 
         channelId = v.snippet.channelId;
         currentChannelName = v.snippet.channelTitle;
-        
         currentCategoryId = v.snippet.categoryId; 
         const catName = getGenreName(currentCategoryId);
         document.getElementById('detectedGenre').innerText = `📺 ${catName} (ID:${currentCategoryId})`;
-
         const key2 = getNextApiKey();
         const c = await fetchChannelDetails(channelId, key2);
-        
         let initialSub = parseInt(c.statistics.subscriberCount);
-        if(isManualSub) {
-            let input = prompt(`現在API値: ${initialSub}\n開始時の登録者数を入力:`, initialSub);
-            if(input !== null && !isNaN(parseInt(input))) initialSub = parseInt(input);
-        }
-        
+        if(isManualSub) { let input = prompt(`現在API値: ${initialSub}\n開始時の登録者数を入力:`, initialSub); if(input !== null && !isNaN(parseInt(input))) initialSub = parseInt(input); }
         sessionData = { startTime: new Date(), startSubCount: initialSub, currentSubCount: initialSub, totalComments: 0, manualFirstComments: 0, currentViewers: parseInt(v.liveStreamingDetails.concurrentViewers||0) };
         nextPageToken = null;
-
         refreshApiKeys();
-        
         const prediction = predictCPM(channelId, currentCategoryId, initialSub);
         const predictedCPM = prediction.val;
         const predSource = prediction.source;
-
         let startMs = calculatedZInterval;
-        if (predictedCPM > 0) {
-            const historyMs = (BATCH_TARGET / predictedCPM) * 60000;
-            startMs = Math.max(startMs, historyMs * 0.8);
-            setStatus(`📜 ${predSource}から予測: CPM${Math.round(predictedCPM)} (間隔${(startMs/1000).toFixed(1)}s)`, "active");
-        } else {
-            setStatus(`🆕 データなし: 安全基準 ${(startMs/1000).toFixed(1)}s で開始`, "grace");
-        }
-
+        if (predictedCPM > 0) { const historyMs = (BATCH_TARGET / predictedCPM) * 60000; startMs = Math.max(startMs, historyMs * 0.8); setStatus(`📜 ${predSource}から予測: CPM${Math.round(predictedCPM)} (間隔${(startMs/1000).toFixed(1)}s)`, "active"); } 
+        else { setStatus(`🆕 データなし: 安全基準 ${(startMs/1000).toFixed(1)}s で開始`, "grace"); }
         const keyCount = Math.max(1, apiKeys.length);
         const minPhysicalMs = API_KEY_LIMIT_MS / keyCount;
         currentPollingInterval = Math.min(MAX_POLLING_ACTIVE, Math.max(minPhysicalMs, startMs));
@@ -805,68 +680,35 @@
     async function runApiLoop() {
         if (!isTracking) return;
         if (!checkQuotaSafe()) { finishSession("API上限到達"); return; }
-        
-        const now = Date.now();
-        let itemCount = 0;
-        
+        const now = Date.now(); let itemCount = 0;
         refreshApiKeys();
-        const keyCount = Math.max(1, apiKeys.length);
-        const minPhysicalMs = API_KEY_LIMIT_MS / keyCount; 
-
         try {
             if(isDemo) { await demoSimulate(); itemCount = Math.floor(Math.random() * 5); } 
             else {
-                const key = getNextApiKey(); 
-                itemCount = await fetchComments(key);
-                
+                const key = getNextApiKey(); itemCount = await fetchComments(key);
                 if (Date.now() - lastCommentReceivedTime >= NO_COMMENT_LIMIT_MS) { finishSession("コメント停止(30分)"); return; }
                 if (Math.random() < 0.2) { await updateStatsSingle(); }
             }
-
-            const timeDiff = now - lastFetchTime; 
-            lastFetchTime = now;
-            
+            const timeDiff = now - lastFetchTime; lastFetchTime = now;
             if (!isFirstRun && timeDiff > 0) {
-                const realRatePerMs = itemCount / timeDiff;
-                const realCPM = realRatePerMs * 60000;
-                
-                if(!isDemo && itemCount > 0 && realCPM < 20000) {
-                    updateChannelStats(channelId, currentChannelName, currentCategoryId, realCPM);
-                }
-
+                const realRatePerMs = itemCount / timeDiff; const realCPM = realRatePerMs * 60000;
+                if(!isDemo && itemCount > 0 && realCPM < 20000) { updateChannelStats(channelId, currentChannelName, currentCategoryId, realCPM); }
                 if(document.getElementById('autoSpeedCheck').checked) {
                     let nextTargetMs = currentPollingInterval; 
-                    if (itemCount === 0) {
-                        nextTargetMs = Math.min(MAX_POLLING_IDLE, currentPollingInterval * 1.5);
-                        setStatus(`💤 待機中 (${(nextTargetMs/1000).toFixed(1)}s)`, "grace");
-                    } else {
-                        let idealMs = BATCH_TARGET / (realRatePerMs || 0.0001);
-                        const blend = (itemCount > 1800) ? 0.8 : 0.4;
-                        nextTargetMs = (currentPollingInterval * (1-blend)) + (idealMs * blend);
-                        setStatus(`🚀 調整中 (実測${Math.round(realCPM)}CPM -> 次${(nextTargetMs/1000).toFixed(1)}s)`, "active");
-                    }
-                    let lowerLimit = Math.max(minPhysicalMs, youtubeSuggestedInterval);
+                    if (itemCount === 0) { nextTargetMs = Math.min(MAX_POLLING_IDLE, currentPollingInterval * 1.5); setStatus(`💤 待機中 (${(nextTargetMs/1000).toFixed(1)}s)`, "grace"); } 
+                    else { let idealMs = BATCH_TARGET / (realRatePerMs || 0.0001); const blend = (itemCount > 1800) ? 0.8 : 0.4; nextTargetMs = (currentPollingInterval * (1-blend)) + (idealMs * blend); setStatus(`🚀 調整中 (実測${Math.round(realCPM)}CPM -> 次${(nextTargetMs/1000).toFixed(1)}s)`, "active"); }
+                    let lowerLimit = Math.max(API_KEY_LIMIT_MS / Math.max(1, apiKeys.length), youtubeSuggestedInterval);
                     currentPollingInterval = Math.min(MAX_POLLING_ACTIVE, Math.max(lowerLimit, nextTargetMs));
                 } else {
-                    let limit = Math.max(minPhysicalMs, calculatedZInterval, youtubeSuggestedInterval);
+                    let limit = Math.max(API_KEY_LIMIT_MS / Math.max(1, apiKeys.length), calculatedZInterval, youtubeSuggestedInterval);
                     currentPollingInterval = Math.min(MAX_POLLING_ACTIVE, limit);
                     setStatus(`🛡️ 固定 (${(currentPollingInterval/1000).toFixed(1)}s)`, "grace");
                 }
-            } else {
-                isFirstRun = false;
-                setStatus("🚀 接続成功！ 計測開始...", "active");
-            }
-
+            } else { isFirstRun = false; setStatus("🚀 接続成功！ 計測開始...", "active"); }
         } catch (e) {
             console.error(e);
-            if (e.message.includes("403") || e.message.includes("429")) {
-                setStatus(`⚠️ API制限(${e.message})。10秒待機`, "warn");
-                await new Promise(r => setTimeout(r, 10000));
-                currentPollingInterval = Math.max(currentPollingInterval * 2, 10000);
-                lastFetchTime = Date.now(); 
-            } else {
-                await new Promise(r => setTimeout(r, 5000));
-            }
+            if (e.message.includes("403") || e.message.includes("429")) { setStatus(`⚠️ API制限(${e.message})。10秒待機`, "warn"); await new Promise(r => setTimeout(r, 10000)); currentPollingInterval = Math.max(currentPollingInterval * 2, 10000); lastFetchTime = Date.now(); } 
+            else { await new Promise(r => setTimeout(r, 5000)); }
         }
         setTimeout(runApiLoop, currentPollingInterval);
     }
@@ -880,7 +722,6 @@
             visualState.totalComments = lerp(visualState.totalComments, sessionData.totalComments, 0.05);
             visualState.viewers = lerp(visualState.viewers, sessionData.currentViewers, 0.05);
             visualState.firstCount = sessionData.manualFirstComments; 
-
             const subDiff = Math.max(0, Math.round(visualState.subCount) - sessionData.startSubCount);
             document.getElementById('dispSubsVal').innerText = Math.round(visualState.subCount).toLocaleString();
             document.getElementById('dispSubsInc').innerText = `(+${subDiff})`;
@@ -892,46 +733,25 @@
         requestAnimationFrame(updateVisualsLoop);
     }
     function lerp(s, e, f) { let d = e - s; if (Math.abs(d) < 0.5) return e; return s + (d * f); }
-    
-    // DBリセット
-    function resetTrends() { 
-        if(confirm("蓄積した学習データ(個人履歴・統計)を全て削除しますか？")){ 
-            personalDatabase={}; globalStats={};
-            saveDatabase(); alert("データをリセットしました"); 
-        } 
-    }
-
+    function resetTrends() { if(confirm("蓄積した学習データ(個人履歴・統計)を全て削除しますか？")){ personalDatabase={}; globalStats={}; saveDatabase(); alert("データをリセットしました"); } }
     function checkConditionsAndTimer() {
         if(!isTracking) return;
         const now = Date.now();
-        const useGoalViewers = document.getElementById('cond_goal_viewers').checked;
-        const useGoalSubs = document.getElementById('cond_goal_subs').checked;
-        const useLimitComments = document.getElementById('cond_limit_comments').checked;
-        const useHatsu = document.getElementById('cond_no_first').checked;
-        const useDousetsu = document.getElementById('cond_low_viewers').checked;
+        const useGoalViewers = document.getElementById('cond_goal_viewers').checked; const useGoalSubs = document.getElementById('cond_goal_subs').checked; const useLimitComments = document.getElementById('cond_limit_comments').checked; const useHatsu = document.getElementById('cond_no_first').checked; const useDousetsu = document.getElementById('cond_low_viewers').checked;
         let danger = false;
-        
         if(useGoalViewers && (parseInt(document.getElementById('val_goal_viewers').value) - sessionData.currentViewers <= 0)) return finishSession("目標同接達成");
         if(useGoalSubs && (parseInt(document.getElementById('val_goal_subs').value) - sessionData.currentSubCount <= 0)) return finishSession("目標登録者達成");
         if(useLimitComments && (parseInt(document.getElementById('val_limit_comments').value) - sessionData.totalComments <= 0)) return finishSession("コメント上限達成");
-
         if (useHatsu) {
-            const limitMs = parseFloat(document.getElementById('val_no_first_min').value) * 60 * 1000;
-            const sec = Math.ceil((limitMs - (now - lastManualFirstActionTime)) / 1000);
-            updateTimerUI('hatsu', sec);
+            const limitMs = parseFloat(document.getElementById('val_no_first_min').value) * 60 * 1000; const sec = Math.ceil((limitMs - (now - lastManualFirstActionTime)) / 1000); updateTimerUI('hatsu', sec);
             if(sec > 0 && sec % 60 === 0 && sec/60 !== lastHatsuAlertMin) { playBeepSound(); speakText(`残り、${sec/60}分`); lastHatsuAlertMin = sec/60; }
             if(sec < 30) { danger = true; if(!hasWarned30SecHatsu && sec > 0) { speakText("はつこめ、30秒前"); hasWarned30SecHatsu = true; } }
             if (sec <= -10) return finishSession("初コメ時間切れ");
         }
-
         if (useDousetsu) {
-            const th = parseInt(document.getElementById('resetViewerThreshold').value);
-            const limitMs = parseFloat(document.getElementById('resetDurationMinutes').value) * 60 * 1000;
+            const th = parseInt(document.getElementById('resetViewerThreshold').value); const limitMs = parseFloat(document.getElementById('resetDurationMinutes').value) * 60 * 1000;
             if (sessionData.currentViewers <= th) {
-                if (!dousetsuDropStartTime) {
-                    dousetsuDropStartTime = now;
-                    speakText("同接が、目標を下回りました");
-                }
+                if (!dousetsuDropStartTime) { dousetsuDropStartTime = now; speakText("同接が、目標を下回りました"); }
                 const sec = Math.ceil((limitMs - (now - dousetsuDropStartTime)) / 1000);
                 if ([30, 10, 5].includes(sec) && lastDousetsuCheckSec !== sec) { updateStatsSingle(); lastDousetsuCheckSec = sec; }
                 updateTimerUI('dousetsu', sec);
@@ -939,28 +759,16 @@
                 if(sec < 30) { danger = true; if(!hasWarned30SecDousetsu && sec > 0) { speakText("同接維持、30秒前"); hasWarned30SecDousetsu = true; } }
                 if (sec <= -10) return finishSession("同接低下");
             } else {
-                if (dousetsuDropStartTime !== null) {
-                    speakText("どううせつ、基準を上回りました。ナイスです。");
-                    const m = document.getElementById('dousetsu-msg');
-                    m.innerText = "回復！ナイス！"; m.classList.add('pop-msg');
-                    setTimeout(()=>m.classList.remove('pop-msg'), 5000);
-                }
-                dousetsuDropStartTime = null; hasWarned30SecDousetsu = false; lastDousetsuAlertMin = -1; 
-                updateTimerUI('dousetsu', limitMs/1000);
+                if (dousetsuDropStartTime !== null) { speakText("どううせつ、基準を上回りました。ナイスです。"); const m = document.getElementById('dousetsu-msg'); m.innerText = "回復！ナイス！"; m.classList.add('pop-msg'); setTimeout(()=>m.classList.remove('pop-msg'), 5000); }
+                dousetsuDropStartTime = null; hasWarned30SecDousetsu = false; lastDousetsuAlertMin = -1; updateTimerUI('dousetsu', limitMs/1000);
             }
         }
-        
-        const scoreEl = document.getElementById('totalPoints');
-        if (danger) { scoreEl.classList.add('danger-text', 'blink-anim'); document.getElementById('conditionStatusText').innerText = "⚠️ 終了条件に接近中..."; document.getElementById('conditionStatusText').style.color = "#e74c3c"; } 
-        else { scoreEl.classList.remove('danger-text', 'blink-anim'); }
+        const scoreEl = document.getElementById('totalPoints'); if (danger) { scoreEl.classList.add('danger-text', 'blink-anim'); document.getElementById('conditionStatusText').innerText = "⚠️ 終了条件に接近中..."; document.getElementById('conditionStatusText').style.color = "#e74c3c"; } else { scoreEl.classList.remove('danger-text', 'blink-anim'); }
     }
 
     function updateTimerUI(type, seconds) {
-        const timeEl = document.getElementById(`${type}-time`);
-        const msgEl = document.getElementById(`${type}-msg`);
-        const absS = Math.abs(seconds);
-        const m = Math.floor(absS / 60).toString().padStart(2, '0');
-        const s = Math.floor(absS % 60).toString().padStart(2, '0');
+        const timeEl = document.getElementById(`${type}-time`); const msgEl = document.getElementById(`${type}-msg`);
+        const absS = Math.abs(seconds); const m = Math.floor(absS / 60).toString().padStart(2, '0'); const s = Math.floor(absS % 60).toString().padStart(2, '0');
         timeEl.innerText = `${seconds<0?"-":""}${m}:${s}`;
         if (seconds < 30) { timeEl.classList.add('danger-text', 'blink-anim'); if (!msgEl.classList.contains('pop-msg')) msgEl.innerText = (seconds < 0) ? "終了まで..." : "粘って！！"; } 
         else { timeEl.classList.remove('danger-text', 'blink-anim'); if (!msgEl.classList.contains('pop-msg')) msgEl.innerText = (type === 'hatsu') ? "コメント待ち..." : "維持してね！"; }
@@ -970,20 +778,11 @@
     function playVolumeTest() { initAudio(); speakText("この音量でいいですか？"); setTimeout(playBeepSound, 2000); }
     
     function speakText(text) { 
-        if (!document.getElementById('soundEnabled').checked) return; 
-        window.speechSynthesis.cancel(); 
-        const msg = new SpeechSynthesisUtterance(text); 
-        msg.lang = "ja-JP"; 
-        msg.volume = Math.min(globalVolume, 1.0); 
-        const voices = speechSynthesis.getVoices();
-        const selectedIndex = document.getElementById('voiceSourceSelector').value;
-        if(selectedIndex && voices[selectedIndex]) msg.voice = voices[selectedIndex];
+        if (!document.getElementById('soundEnabled').checked) return; window.speechSynthesis.cancel(); 
+        const msg = new SpeechSynthesisUtterance(text); msg.lang = "ja-JP"; msg.volume = Math.min(globalVolume, 1.0); 
+        const voices = speechSynthesis.getVoices(); const selectedIndex = document.getElementById('voiceSourceSelector').value; if(selectedIndex && voices[selectedIndex]) msg.voice = voices[selectedIndex];
         const type = document.getElementById('voiceTypeSelector').value;
-        switch(type) {
-            case 'kawaii': msg.pitch = 1.1; msg.rate = 1.2; break;
-            case 'ikemen': msg.pitch = 0.8; msg.rate = 0.85; break;
-            default: msg.pitch = 1.0; msg.rate = 1.0;
-        }
+        switch(type) { case 'kawaii': msg.pitch = 1.1; msg.rate = 1.2; break; case 'ikemen': msg.pitch = 0.8; msg.rate = 0.85; break; default: msg.pitch = 1.0; msg.rate = 1.0; }
         window.speechSynthesis.speak(msg); 
     }
     
@@ -999,19 +798,9 @@
     function adjustSub(a) { if(!isTracking) return; sessionData.currentSubCount += a; }
 
     async function finishSession(reason) {
-        if(!isTracking || isFinishing) return; isFinishing = true; 
-        if(checkInterval) clearInterval(checkInterval); 
-        
-        // 終了時、全体統計に今回の平均CPMを学習させる
+        if(!isTracking || isFinishing) return; isFinishing = true; if(checkInterval) clearInterval(checkInterval); 
         const durationMin = (Date.now() - sessionData.startTime.getTime()) / 60000;
-        if(durationMin > 1 && !isDemo) {
-            const avgCPM = sessionData.totalComments / durationMin;
-            if(!globalStats[currentCategoryId]) globalStats[currentCategoryId] = { totalCPM:0, count:0 };
-            globalStats[currentCategoryId].totalCPM += avgCPM;
-            globalStats[currentCategoryId].count++;
-            saveDatabase();
-        }
-        
+        if(durationMin > 1 && !isDemo) { const avgCPM = sessionData.totalComments / durationMin; if(!globalStats[currentCategoryId]) globalStats[currentCategoryId] = { totalCPM:0, count:0 }; globalStats[currentCategoryId].totalCPM += avgCPM; globalStats[currentCategoryId].count++; saveDatabase(); }
         setStatus("📊 集計中...", "warn");
         if(!isDemo) { try { await updateStatsSingle(); const k=getNextApiKey(); await fetchComments(k); if(!isManualSub){ const k2=getNextApiKey(); const c=await fetchChannelDetails(channelId, k2); sessionData.currentSubCount=parseInt(c.statistics.subscriberCount); } } catch(e){} }
         isTracking = false; document.body.classList.remove('tracking'); document.getElementById('subManualControls').style.display = 'none';
@@ -1027,18 +816,11 @@
     async function fetchComments(key) { addApiQuota(5); let url = `https://www.googleapis.com/youtube/v3/liveChat/messages?liveChatId=${liveChatId}&part=id&key=${key}&maxResults=2000`; if (nextPageToken) url += `&pageToken=${nextPageToken}`; const res = await fetch(url); if (!res.ok) throw new Error(`${res.status}`); const data = await res.json(); 
         if(data.pollingIntervalMillis) youtubeSuggestedInterval = data.pollingIntervalMillis;
         let count = 0; if (data.items && data.items.length > 0) { count = data.items.length; sessionData.totalComments += count; lastCommentReceivedTime = Date.now(); } if (data.nextPageToken) nextPageToken = data.nextPageToken; 
-        const d = new Date();
-        document.getElementById('lastCommTime').innerText = `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')}`;
+        const d = new Date(); document.getElementById('lastCommTime').innerText = `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')}`;
         return count; 
     }
     function extractVideoId(u){ const m=u.match(/^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/); return (m&&m[7].length==11)?m[7]:false; }
-    function validateInputs(){ 
-        const keyVal = document.getElementById(API_KEY_ELEMENT_ID).value;
-        const urlVal = document.getElementById('url').value;
-        if(!keyVal) return false; 
-        if(!urlVal) return false; 
-        return true; 
-    }
+    function validateInputs(){ const keyVal = document.getElementById(API_KEY_ELEMENT_ID).value; const urlVal = document.getElementById('url').value; if(!keyVal) return false; if(!urlVal) return false; return true; }
     function updateSessionInfo() { let h = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); document.getElementById('challengeCount').innerText = `${h.length + 1}回目`; document.getElementById('prevScore').innerText = h.length > 0 ? h[h.length - 1].points.toLocaleString() : "--"; }
     function saveToHistory(r) { let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); h.push(r); localStorage.setItem(HISTORY_KEY,JSON.stringify(h)); renderHistory(); }
     function renderHistory() { let h=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); const tb=document.querySelector('#historyTable tbody'); tb.innerHTML=""; h.slice().reverse().forEach((i,x)=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${h.length-x}</td><td style="font-weight:900;color:#e84393;">${i.points}</td><td>${i.startTime}</td><td>${i.endTime}</td><td>+${i.subDiff}</td><td>${i.firstComments}</td><td>${i.totalComments}</td><td>${i.reason}</td>`; tb.appendChild(tr); }); }
@@ -1048,20 +830,7 @@
     function addApiQuota(a) { if(document.getElementById('demoModeCheck').checked) return; const u = JSON.parse(localStorage.getItem(QUOTA_KEY) || "{}"); const t = new Date().toDateString(); u[t] = (u[t]||0) + a; localStorage.setItem(QUOTA_KEY, JSON.stringify(u)); displayApiQuota(); }
     function checkQuotaSafe() { if(document.getElementById('demoModeCheck').checked) return true; const u = JSON.parse(localStorage.getItem(QUOTA_KEY) || "{}"); return (u[new Date().toDateString()] || 0) < 10000; }
     function checkDstAndDisplayResetTime() { const n = new Date(); const isDst = n.getTimezoneOffset() < Math.max(new Date(n.getFullYear(),0,1).getTimezoneOffset(), new Date(n.getFullYear(),6,1).getTimezoneOffset()); const rh = isDst ? 16 : 17; if(document.getElementById('apiResetTimeDisplay')) document.getElementById('apiResetTimeDisplay').innerText = `${rh}:00 (JST)`; return rh; }
-    async function previewVideo() { 
-        refreshApiKeys(); 
-        const u=document.getElementById('url').value; const id=extractVideoId(u); if(!id) return alert("URL不正"); 
-        try{ 
-            const k=getNextApiKey(); 
-            if(!k)return alert("APIキーなし"); 
-            const v=await fetchVideoDetails(id,k); 
-            document.getElementById('vcThumb').src=v.snippet.thumbnails.default.url; document.getElementById('vcTitle').innerText=v.snippet.title; document.getElementById('vcChannel').innerText=v.snippet.channelTitle; document.getElementById('videoCard').style.display="flex"; 
-            // プレビュー時点でもID判定
-            const catId = v.snippet.categoryId;
-            const gn = getGenreName(catId);
-            document.getElementById('detectedGenre').innerText = `📺 ${gn} (ID:${catId})`;
-        }catch(e){alert("取得失敗:"+e.message);} 
-    }
+    async function previewVideo() { refreshApiKeys(); const u=document.getElementById('url').value; const id=extractVideoId(u); if(!id) return alert("URL不正"); try{ const k=getNextApiKey(); if(!k)return alert("APIキーなし"); const v=await fetchVideoDetails(id,k); document.getElementById('vcThumb').src=v.snippet.thumbnails.default.url; document.getElementById('vcTitle').innerText=v.snippet.title; document.getElementById('vcChannel').innerText=v.snippet.channelTitle; document.getElementById('videoCard').style.display="flex"; const catId = v.snippet.categoryId; const gn = getGenreName(catId); document.getElementById('detectedGenre').innerText = `📺 ${gn} (ID:${catId})`; }catch(e){alert("取得失敗:"+e.message);} }
 </script>
 </body>
-</html>
+    </html>
