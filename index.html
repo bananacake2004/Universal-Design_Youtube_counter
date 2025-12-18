@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jewel Ocean: Auto-Learning CPM</title>
+    <title>Jewel Ocean: ID-Based Learning</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
     <style>
-        /* --- デザイン定義 (前回のままOBS対応済み) --- */
+        /* --- ベースデザイン --- */
         :root {
             --bg-grad-1: #a18cd1; --bg-grad-2: #fbc2eb;
             --glass-bg: rgba(255, 255, 255, 0.95); --glass-border: rgba(255, 255, 255, 0.6);
@@ -104,22 +104,25 @@
 
         .obs-toggle { text-align: right; margin-bottom: 10px; }
         
-        /* OBSモード (横並び・全画面) */
+        /* OBSモード (横並び・サイズ修正版) */
         body.obs-mode { 
             background: transparent; 
-            padding: 0; margin: 0;
-            overflow: hidden; /* スクロール禁止 */
+            padding: 20px; margin: 0;
+            overflow: hidden; 
             height: 100vh; width: 100vw;
+            box-sizing: border-box;
         }
         body.obs-mode .bubbles, body.obs-mode .setting-wrap, body.obs-mode .history-wrap, body.obs-mode .status-bar, body.obs-mode .control-area, body.obs-mode .sound-setting, body.obs-mode .sub-manual-controls { display: none !important; }
         body.obs-mode .obs-toggle { position: fixed; top: 10px; right: 10px; opacity: 0.1; transition: opacity 0.3s; z-index: 99999; }
         body.obs-mode .obs-toggle:hover { opacity: 1; }
-        body.obs-mode .container { max-width: 100%; margin: 0; padding: 20px; height: 100%; box-sizing: border-box; }
+        body.obs-mode .container { max-width: 100%; margin: 0; height: 100%; }
+        
+        /* OBS時のカードデザイン */
         body.obs-mode .glass-card.score-card { 
             margin: 0; 
             border: 6px solid var(--accent-color); 
             background: rgba(255,255,255,0.95); 
-            height: calc(100vh - 40px);
+            height: 100%;
             box-sizing: border-box;
             display: grid;
             grid-template-columns: 1fr 1.2fr;
@@ -128,17 +131,29 @@
             align-content: stretch;
             padding: 20px;
         }
+        
+        /* フォントサイズを「前くらい（常識的な大きさ）」に戻す */
         body.obs-mode .score-wrapper { display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        body.obs-mode .score-value { font-size: 12vw; margin: 0; filter: drop-shadow(0 8px 12px rgba(108, 92, 231, 0.3)); }
-        body.obs-mode .session-badge { font-size: 1.5rem; padding: 10px 30px; }
-        body.obs-mode .timer-display-area { display: flex; flex-direction: column; width: 100%; gap: 15px; margin-top: 20px; }
-        body.obs-mode .timer-box { display: none; padding: 15px; border-width: 6px; }
+        
+        /* 以前の特大12vwから、固定の大きめサイズ(5remなど)に変更 */
+        body.obs-mode .score-value { 
+            font-size: 6rem; /* 程よい大きさ */
+            margin: 10px 0; 
+            filter: drop-shadow(0 4px 6px rgba(108, 92, 231, 0.3)); 
+        }
+        body.obs-mode .session-badge { font-size: 1.2rem; padding: 10px 20px; }
+        
+        /* タイマー周り */
+        body.obs-mode .timer-display-area { display: flex; flex-direction: column; width: 100%; gap: 15px; margin-top: 10px; }
+        body.obs-mode .timer-box { display: none; padding: 15px; border-width: 4px; }
         body.obs-mode .timer-box.active { display: block; }
-        body.obs-mode .timer-time { font-size: 4rem; margin: 5px 0; }
+        body.obs-mode .timer-time { font-size: 3rem; margin: 5px 0; } /* 4rem -> 3remへ縮小 */
+
+        /* 右側ステータス */
         body.obs-mode .stats-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; margin: 0; height: 100%; }
         body.obs-mode .stat-box { padding: 10px; justify-content: center; }
-        body.obs-mode .stat-num { font-size: 4vw; }
-        body.obs-mode .stat-label { font-size: 1.2rem; }
+        body.obs-mode .stat-num { font-size: 2.5rem; } /* 4vw -> 2.5remへ縮小 */
+        body.obs-mode .stat-label { font-size: 1rem; }
         body.obs-mode .btn-manual, body.obs-mode .btn-adj { display: none; }
         
         .status-bar { padding: 16px; background: #fff; border-radius: 16px; text-align: center; font-weight: bold; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
@@ -196,7 +211,7 @@
 
     <div class="glass-card setting-wrap">
         <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 20px;">
-            <h2 style="margin:0; border:none;">⚙️ 自動学習＆計測</h2>
+            <h2 style="margin:0; border:none;">⚙️ 自動学習＆計測 (ID分類版)</h2>
             <div class="api-meter">
                 <span>API消費(PT):</span>
                 <div class="api-bar-bg"><div id="apiBar" class="api-bar-fill"></div></div>
@@ -226,7 +241,7 @@
                     <input type="number" id="targetHours" value="4" min="0.5" step="0.5" oninput="updateForecast()" onkeyup="updateForecast()" onchange="updateForecast()">
                 </div>
                 <div class="input-group" style="background:#f1f2f6; padding:10px; border-radius:12px;">
-                    <label style="font-size:0.9rem; margin-bottom:5px;">🤖 自動判定ジャンル:</label>
+                    <label style="font-size:0.9rem; margin-bottom:5px;">🤖 自動判定ID:</label>
                     <div id="detectedGenre" style="font-weight:bold; color:#6c5ce7;">(URL入力待ち...)</div>
                 </div>
 
@@ -414,8 +429,8 @@
     const QUOTA_KEY = "yt_api_quota_pt_v1";
     
     // データ保存キー：個人別詳細データ & 全体統計
-    const DATABASE_KEY = "yt_personal_database_v1"; 
-    const GLOBAL_STATS_KEY = "yt_global_stats_v1";
+    const DATABASE_KEY = "yt_personal_database_id_v2"; // キー名を変更(ID版)
+    const GLOBAL_STATS_KEY = "yt_global_stats_id_v2";
 
     const API_KEY_LIMIT_MS = 3000; 
     const BATCH_TARGET = 1800;
@@ -423,7 +438,7 @@
     const MAX_POLLING_ACTIVE = 70000; 
     const MAX_POLLING_IDLE = 70000;
 
-    // カテゴリIDの簡易マッピング（主要なもののみ）
+    // カテゴリIDの簡易マッピング（表示用）
     const videoCategories = {
         '1': 'Film & Animation', '2': 'Autos & Vehicles', '10': 'Music', '15': 'Pets & Animals',
         '17': 'Sports', '20': 'Gaming', '22': 'People & Blogs', '23': 'Comedy',
@@ -441,8 +456,9 @@
     let youtubeSuggestedInterval = 5000;
     let lastFetchTime = 0;
     
-    let personalDatabase = {}; // { channelId: { name: "Aさん", genres: { "Gaming": [0,0,500...24個] } } }
-    let globalStats = {};      // { "Gaming": { totalCPM: 1000, count: 50, avgSubs: 100000 } }
+    // DB構造: { channelId: { name: "Aさん", genres: { "20": [0,0,500...24個] } } }
+    let personalDatabase = {}; 
+    let globalStats = {};      
     
     let sessionData = { startTime: null, startSubCount: 0, currentSubCount: 0, totalComments: 0, manualFirstComments: 0, currentViewers: 0 };
     
@@ -457,7 +473,7 @@
     let lastCommentReceivedTime = 0;
 
     let videoId = "", channelId = "", liveChatId = null, nextPageToken = null;
-    let currentGenreName = "Unknown"; // 自動判定されたジャンル
+    let currentCategoryId = "0"; // ID管理
     let currentChannelName = "";
     
     let isDemo = false, isManualSub = true;
@@ -473,7 +489,7 @@
         updateSessionInfo();
         displayApiQuota(); 
         updateVisibility(); 
-        loadDatabase(); // データベース読み込み
+        loadDatabase(); 
         updateForecast(); 
         populateVoiceList();
         
@@ -490,7 +506,6 @@
         requestAnimationFrame(updateVisualsLoop); 
     };
     
-    // --- データベース管理 (軽量JSON) ---
     function loadDatabase() {
         try {
             personalDatabase = JSON.parse(localStorage.getItem(DATABASE_KEY) || "{}");
@@ -504,57 +519,48 @@
         } catch(e) { console.error("DB Save Error", e); }
     }
     
-    // 記録更新ロジック: その人の・そのジャンルの・その時間の最高記録を更新
-    function updateChannelStats(cid, cname, genre, currentCPM) {
+    // 更新ロジック (IDベース)
+    function updateChannelStats(cid, cname, catId, currentCPM) {
         if (!personalDatabase[cid]) personalDatabase[cid] = { name: cname, genres: {} };
-        if (!personalDatabase[cid].genres[genre]) personalDatabase[cid].genres[genre] = new Array(24).fill(0);
+        // catId ("20"など) をキーにする
+        if (!personalDatabase[cid].genres[catId]) personalDatabase[cid].genres[catId] = new Array(24).fill(0);
         
-        // 個人記録の更新
         const h = new Date().getHours();
-        if (currentCPM > personalDatabase[cid].genres[genre][h]) {
-            personalDatabase[cid].genres[genre][h] = Math.round(currentCPM);
+        if (currentCPM > personalDatabase[cid].genres[catId][h]) {
+            personalDatabase[cid].genres[catId][h] = Math.round(currentCPM);
         }
         
-        // 全体統計の更新（シンプルに加算平均用）
-        if (!globalStats[genre]) globalStats[genre] = { totalCPM: 0, count: 0 };
-        // ※あまり頻繁に足すと偏るので、セッション終了時などにまとめてやるのがベターだが、
-        // ここでは簡易的に「新しいCPMが出るたびに」少し学習させる（実際はfinishSessionでやる方が綺麗）
-        
+        // 全体統計もIDベース
+        if (!globalStats[catId]) globalStats[catId] = { totalCPM: 0, count: 0 };
         saveDatabase();
     }
     
-    // 予測ロジック
-    function predictCPM(cid, genre, subs) {
-        // 1. その人の過去データがあるか？
-        if (personalDatabase[cid] && personalDatabase[cid].genres[genre]) {
-            // その時間帯の最大値、もしくは全体の平均を取る
+    // 予測ロジック (IDベース)
+    function predictCPM(cid, catId, subs) {
+        // 1. 個人のID別履歴
+        if (personalDatabase[cid] && personalDatabase[cid].genres[catId]) {
             const h = new Date().getHours();
-            let val = personalDatabase[cid].genres[genre][h];
+            let val = personalDatabase[cid].genres[catId][h];
             if (val > 0) return { val: val, source: "個人履歴" };
             
-            // その時間のデータがなければ、そのジャンルの平均
-            const valid = personalDatabase[cid].genres[genre].filter(v => v > 0);
+            const valid = personalDatabase[cid].genres[catId].filter(v => v > 0);
             if (valid.length > 0) {
                 const avg = valid.reduce((a,b)=>a+b,0) / valid.length;
                 return { val: avg, source: "個人平均" };
             }
         }
         
-        // 2. なければ全体統計から「登録者数あたりのCPM」で推測
-        // (仮定: 1000人あたり0.5CPM程度をベースに、ジャンル係数を掛ける)
-        let baseRatio = 0.0005; // デフォルト係数
-        if (genre.includes("Gaming")) baseRatio = 0.0015; // ゲームはコメント多い
-        if (genre.includes("Music")) baseRatio = 0.0008;
-        if (genre.includes("People")) baseRatio = 0.0003; // 雑談は長いのでCPMは低めに出がち
+        // 2. 全体統計 (ID別)
+        let baseRatio = 0.0005; 
+        if (catId === "20") baseRatio = 0.0015; // Gaming
+        if (catId === "10") baseRatio = 0.0008; // Music
         
-        // 全体統計データがあればそれを使う
-        if (globalStats[genre] && globalStats[genre].count > 0) {
-            const avgGenreCPM = globalStats[genre].totalCPM / globalStats[genre].count;
-            // ここで登録者数を考慮できればベストだが、今回は簡易的に「ジャンル平均CPM」を返す
-            return { val: avgGenreCPM, source: "ジャンル平均" };
+        if (globalStats[catId] && globalStats[catId].count > 0) {
+            const avgGenreCPM = globalStats[catId].totalCPM / globalStats[catId].count;
+            return { val: avgGenreCPM, source: "カテゴリ平均" };
         }
 
-        // 3. データなし：数式予測
+        // 3. 新規推測
         return { val: subs * baseRatio, source: "新規推測" };
     }
 
@@ -613,15 +619,11 @@
         const display = document.getElementById('chatIntervalDisplay');
         const box = document.getElementById('aiForecastBox');
         
-        // URLからID抽出だけ試みる（まだAPIは叩かない）
+        // プレビューのみ
         const urlVal = document.getElementById('url').value;
         const tempVid = extractVideoId(urlVal);
-        
         if (tempVid && apiKeys.length > 0) {
-            // プレビュー的に情報を取得してジャンル判定（1回だけ）
-            // ※ここは頻繁に呼ばれると消費するので、ボタン押下時などのほうが良いが、利便性重視で実装
-            // 今回は「計測スタート」時、またはユーザーが明示的にチェックした時に確定する形にする
-            // ここでは表示のみ更新
+             // ここではまだAPI叩かない（ボタンで確定させる）
         }
 
         const h = parseFloat(document.getElementById('targetHours').value);
@@ -704,7 +706,7 @@
     async function initSession() {
         if(isDemo) { 
             sessionData = { startTime: new Date(), startSubCount: 10000, currentSubCount: 10000, totalComments: 0, manualFirstComments: 0, currentViewers: 50 }; 
-            currentGenreName = "DemoGame";
+            currentCategoryId = "0";
             document.getElementById('detectedGenre').innerText = "🧪 Demo Mode";
             currentPollingInterval = 3000;
             return; 
@@ -719,10 +721,10 @@
         channelId = v.snippet.channelId;
         currentChannelName = v.snippet.channelTitle;
         
-        // ジャンル自動判定
-        const catId = v.snippet.categoryId;
-        currentGenreName = getGenreName(catId);
-        document.getElementById('detectedGenre').innerText = `📺 ${currentGenreName} (ID:${catId})`;
+        // ID取得
+        currentCategoryId = v.snippet.categoryId; // これを使う
+        const catName = getGenreName(currentCategoryId);
+        document.getElementById('detectedGenre').innerText = `📺 ${catName} (ID:${currentCategoryId})`;
 
         const key2 = getNextApiKey();
         const c = await fetchChannelDetails(channelId, key2);
@@ -738,8 +740,8 @@
 
         refreshApiKeys();
         
-        // --- ここで予測ロジック発動 ---
-        const prediction = predictCPM(channelId, currentGenreName, initialSub);
+        // 予測 (IDを渡す)
+        const prediction = predictCPM(channelId, currentCategoryId, initialSub);
         const predictedCPM = prediction.val;
         const predSource = prediction.source;
 
@@ -786,8 +788,8 @@
                 const realCPM = realRatePerMs * 60000;
                 
                 if(!isDemo && itemCount > 0 && realCPM < 20000) {
-                    // 自動学習: CPMを記録更新
-                    updateChannelStats(channelId, currentChannelName, currentGenreName, realCPM);
+                    // IDベースで更新
+                    updateChannelStats(channelId, currentChannelName, currentCategoryId, realCPM);
                 }
 
                 if(document.getElementById('autoSpeedCheck').checked) {
@@ -962,9 +964,9 @@
         const durationMin = (Date.now() - sessionData.startTime.getTime()) / 60000;
         if(durationMin > 1 && !isDemo) {
             const avgCPM = sessionData.totalComments / durationMin;
-            if(!globalStats[currentGenreName]) globalStats[currentGenreName] = { totalCPM:0, count:0 };
-            globalStats[currentGenreName].totalCPM += avgCPM;
-            globalStats[currentGenreName].count++;
+            if(!globalStats[currentCategoryId]) globalStats[currentCategoryId] = { totalCPM:0, count:0 };
+            globalStats[currentCategoryId].totalCPM += avgCPM;
+            globalStats[currentCategoryId].count++;
             saveDatabase();
         }
         
@@ -1012,7 +1014,7 @@
             if(!k)return alert("APIキーなし"); 
             const v=await fetchVideoDetails(id,k); 
             document.getElementById('vcThumb').src=v.snippet.thumbnails.default.url; document.getElementById('vcTitle').innerText=v.snippet.title; document.getElementById('vcChannel').innerText=v.snippet.channelTitle; document.getElementById('videoCard').style.display="flex"; 
-            // プレビュー時点でもジャンル判定
+            // プレビュー時点でもID判定
             const catId = v.snippet.categoryId;
             const gn = getGenreName(catId);
             document.getElementById('detectedGenre').innerText = `📺 ${gn} (ID:${catId})`;
@@ -1020,4 +1022,4 @@
     }
 </script>
 </body>
-                                             </html>
+</html>
