@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jewel Ocean: Perfect OBS Layout</title>
+    <title>Jewel Ocean: Final OBS Control</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -104,11 +104,11 @@
 
         .obs-toggle { text-align: right; margin-bottom: 10px; }
         
-        /* --- 修正版 OBSモード (完全フィット＆レイアウト整理) --- */
+        /* --- OBSモード (完全フィット＆ボタン操作可能版) --- */
         body.obs-mode { 
             background: transparent; 
             padding: 0; margin: 0;
-            overflow: hidden; /* スクロール絶対出さない */
+            overflow: hidden; 
             height: 100vh; width: 100vw;
             box-sizing: border-box;
         }
@@ -118,7 +118,6 @@
         body.obs-mode .obs-toggle:hover { opacity: 1; }
         body.obs-mode .container { max-width: 100%; margin: 0; height: 100%; padding: 15px; box-sizing: border-box; }
         
-        /* メイングリッド: 左35% 右65% */
         body.obs-mode .glass-card.score-card { 
             margin: 0; 
             border: 6px solid var(--accent-color); 
@@ -132,17 +131,15 @@
             align-content: stretch;
         }
 
-        /* 左側: スコア & タイマー (中央揃え) */
+        /* 左側: スコア */
         body.obs-mode .score-wrapper {
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             height: 100%;
             border-right: 2px dashed #eee; padding-right: 15px;
         }
         body.obs-mode .score-title { font-size: 3vh; margin: 0; color: var(--accent-color); }
-        /* 文字サイズをvh指定で画面高さに追従させる */
         body.obs-mode .score-value { 
-            font-size: 18vh; 
-            line-height: 1; margin: 2vh 0; 
+            font-size: 18vh; line-height: 1; margin: 2vh 0; 
             filter: drop-shadow(0 4px 6px rgba(108, 92, 231, 0.3)); 
         }
         body.obs-mode .session-badge { font-size: 2.5vh; padding: 0.5vh 2vh; margin-bottom: 1vh; white-space: nowrap; }
@@ -153,40 +150,53 @@
         body.obs-mode .timer-time { font-size: 6vh; margin: 0; line-height: 1; }
         body.obs-mode .timer-msg { font-size: 2vh; min-height: 1.2em; }
 
-        /* 右側: ステータス & 操作盤 */
+        /* 右側: ステータス */
         body.obs-mode .obs-right-col {
             display: grid;
-            grid-template-rows: 1fr auto; /* 上:ステータス(残り全て) 下:操作盤(自動) */
+            grid-template-rows: 1fr auto; 
             gap: 15px;
             height: 100%;
         }
 
-        /* 4つのステータス (2x2グリッド) */
         body.obs-mode .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             grid-template-rows: 1fr 1fr;
             gap: 10px;
             margin: 0;
-            height: 100%; /* 親の残り高さいっぱい */
+            height: 100%; 
         }
         body.obs-mode .stat-box { 
             padding: 5px; 
             justify-content: center; 
             height: 100%; 
             box-sizing: border-box;
-            border: 3px solid #f1f2f6; /* 枠線を少し太く */
+            border: 3px solid #f1f2f6;
         }
         body.obs-mode .stat-num { font-size: 7vh; margin: 0; line-height: 1.1; }
         body.obs-mode .stat-label { font-size: 2.5vh; margin-top: 0.5vh; }
         body.obs-mode .stat-sub { font-size: 2vh; }
-        /* OBSでは不要なボタンを消す */
-        body.obs-mode .btn-adj, body.obs-mode .btn-manual, body.obs-mode #subManualControls, body.obs-mode .btn-test { display: none !important; }
 
-        /* 右下: 操作パネル (横並びで整理) */
+        /* OBSモードでのボタン表示設定 (前回の非表示設定を解除) */
+        body.obs-mode #subManualControls,
+        body.obs-mode .btn-manual,
+        body.obs-mode .btn-adj,
+        body.obs-mode .btn-test {
+            display: inline-flex !important; /* 強制表示 */
+            align-items: center;
+            justify-content: center;
+            margin-top: 1vh;
+        }
+        
+        /* OBSモード用のボタンサイズ調整 */
+        body.obs-mode .btn-adj { width: 5vh; height: 5vh; font-size: 3vh; margin: 0 1vh; }
+        body.obs-mode .btn-manual { font-size: 2vh; padding: 0.5vh 2vh; margin-top: 1vh; width: auto; }
+        body.obs-mode .btn-test { font-size: 2.5vh; padding: 0.5vh 2vh; }
+
+        /* 右下: 操作パネル */
         body.obs-mode .control-panel-obs {
             display: grid;
-            grid-template-columns: 2fr 1fr; /* ボタン2 : 音量1 の比率 */
+            grid-template-columns: 2fr 1fr; 
             gap: 15px;
             align-items: center;
             background: #f8f9fa;
@@ -195,19 +205,9 @@
             border-radius: 16px;
         }
 
-        /* スタート/ストップボタン */
-        body.obs-mode .control-area { 
-            display: flex !important; margin: 0; padding: 0; width: 100%;
-        }
-        body.obs-mode .btn-start, body.obs-mode .btn-stop {
-            width: 100%; 
-            padding: 1.5vh 0; 
-            font-size: 3vh; 
-            border-radius: 12px;
-            margin: 0;
-        }
+        body.obs-mode .control-area { display: flex !important; margin: 0; padding: 0; width: 100%; }
+        body.obs-mode .btn-start, body.obs-mode .btn-stop { width: 100%; padding: 1.5vh 0; font-size: 3vh; border-radius: 12px; margin: 0; }
 
-        /* 音量エリア */
         body.obs-mode .sound-setting {
             display: flex !important; flex-direction: column; 
             border: none; margin: 0; padding: 0; background: transparent;
@@ -460,8 +460,8 @@
                     <div class="voice-box">
                         <select id="voiceSourceSelector" class="voice-select" onchange="playVolumeTest()"><option value="">(ベース音声)</option></select>
                         <select id="voiceTypeSelector" class="voice-select" onchange="playVolumeTest()">
-                            <option value="robot">🤖 ノーマル機械ボイス</option>
-                            <option value="kawaii">👧 可愛い</option>
+                            <option value="robot">🤖 機械</option>
+                            <option value="kawaii">👧 可愛</option>
                             <option value="ikemen">✨ イケメン</option>
                         </select>
                     </div>
@@ -833,4 +833,4 @@
     async function previewVideo() { refreshApiKeys(); const u=document.getElementById('url').value; const id=extractVideoId(u); if(!id) return alert("URL不正"); try{ const k=getNextApiKey(); if(!k)return alert("APIキーなし"); const v=await fetchVideoDetails(id,k); document.getElementById('vcThumb').src=v.snippet.thumbnails.default.url; document.getElementById('vcTitle').innerText=v.snippet.title; document.getElementById('vcChannel').innerText=v.snippet.channelTitle; document.getElementById('videoCard').style.display="flex"; const catId = v.snippet.categoryId; const gn = getGenreName(catId); document.getElementById('detectedGenre').innerText = `📺 ${gn} (ID:${catId})`; }catch(e){alert("取得失敗:"+e.message);} }
 </script>
 </body>
-    </html>
+</html>
